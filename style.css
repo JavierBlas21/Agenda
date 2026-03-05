@@ -18,3 +18,16 @@ button { cursor: pointer; border: none; padding: 10px 15px; border-radius: 6px; 
 .check-list { max-height: 120px; overflow-y: auto; border: 1px solid #e2e8f0; padding: 10px; margin-bottom: 10px; }
 .admin-edit-cupo { background: #f8fafc; padding: 5px; border-radius: 4px; border: 1px dashed #3b82f6; font-size: 0.75rem; }
 .admin-edit-cupo input { width: 45px; padding: 2px; text-align: center; margin: 0; }
+
+.check-list label {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Espacio entre el cuadro y el nombre */
+    padding: 5px 0;
+    cursor: pointer;
+}
+
+.check-list input[type="checkbox"] {
+    width: auto; /* Evita que el checkbox crezca al 100% */
+    margin: 0;
+}
