@@ -1,3 +1,9 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+// --- CONFIGURACIÓN ---
+const SUPABASE_URL = 'https://zmvxfulnlhlunzjropwv.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_lMMPid76_7wXStQeyzWPkw_PvTwQ5lu'
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 let perfilActual = null;
