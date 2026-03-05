@@ -101,3 +101,119 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
 
 // Ejecutar al cargar la página por si hay sesión activa
 checkUser();
+
+// --- 4. REGISTRO DE USUARIOS COORDINADORES (ADMIN) ---
+
+window.registrarUsuario = async () => {
+    const email = document.getElementById('user-email').value;
+    const nombre = document.getElementById('user-fullname').value;
+    const idFletera = document.getElementById('select-fletera-user').value;
+    
+    // Contraseña al azar de 8 caracteres
+    const passwordTemporal = Math.random().toString(36).slice(-8);
+
+    // Obtener las bodegas seleccionadas en los checkboxes
+    const bodegasSeleccionadas = Array.from(document.querySelectorAll('input[name="bodega-check"]:checked'))
+        .map(cb => cb.value);
+
+    if (!email || !nombre || bodegasSeleccionadas.length === 0) {
+        return alert("Por favor llena el nombre, correo y selecciona al menos una bodega.");
+    }
+
+    // 1. Crear el usuario en la Autenticación de Supabase
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email,
+        password: passwordTemporal,
+    });
+
+    if (authError) return alert("Error al crear acceso: " + authError.message);
+
+    // 2. Crear el perfil con sus permisos en la tabla 'perfiles'
+    const { error: perfilError } = await supabase.from('perfiles').insert([{
+        id: authData.user.id,
+        usuario: nombre,
+        rol: 'COORDINADOR',
+        id_fletera: idFletera,
+        bodegas_asignadas: bodegasSeleccionadas
+    }]);
+
+    if (perfilError) {
+        alert("Usuario creado en Auth, pero error en perfil: " + perfilError.message);
+    } else {
+        alert(`¡ÉXITO!\nUsuario: ${nombre}\nCorreo: ${email}\nPASS TEMPORAL: ${passwordTemporal}\n\n(Anota la contraseña, no se volverá a mostrar)`);
+        // Limpiar campos
+        document.getElementById('user-email').value = '';
+        document.getElementById('user-fullname').value = '';
+    }
+};
+
+// --- 5. MOTOR DE LA AGENDA (VISUALIZACIÓN) ---
+
+async function actualizarTablaAgenda() {
+    const fechaInput = document.getElementById('filtro-fecha');
+    // Si no hay fecha elegida, usar hoy
+    if (!fechaInput.value) {
+        fechaInput.value = new Date().toISOString().split('T')[0];
+    }
+    const fechaSel = fechaInput.value;
+    const tbody = document.getElementById('agenda-body');
+    tbody.innerHTML = '<tr><td colspan="3">Cargando agenda...</td></tr>';
+
+    // 1. Traer todas las bodegas
+    const { data: todasLasBodegas } = await supabase.from('bodegas').select('*').order('nombre');
+    
+    // 2. Traer reservaciones del día
+    const { data: reservas } = await supabase.from('reservaciones')
+        .select('*')
+        .eq('fecha', fechaSel)
+        .eq('estatus', 'ACTIVA');
+
+    tbody.innerHTML = '';
+
+    // Bucle de 24 horas (00:00 a 23:00)
+    for (let h = 0; h < 24; h++) {
+        const horaStr = `${h.toString().padStart(2, '0')}:00:00`;
+        const horaLegible = `${h.toString().padStart(2, '0')}:00`;
+
+        let fila = `<tr><td><strong>${horaLegible}</strong></td>`;
+
+        // COLUMNA ENVÍO (Universal para todos)
+        const cuposEnvioMax = 5; // Puedes hacerlo dinámico después
+        const ocupadosEnvio = reservas.filter(r => r.hora === horaStr && r.tipo === 'ENVIO').length;
+        const dispEnvio = cuposEnvioMax - ocupadosEnvio;
+        
+        fila += `
+            <td>
+                <span class="badge ${dispEnvio > 0 ? 'green' : 'red'}">${dispEnvio} libres</span><br>
+                <button onclick="prepararCita('${horaStr}', 'ENVIO')" ${dispEnvio <= 0 ? 'disabled' : ''}>Reservar</button>
+            </td>`;
+
+        // COLUMNA ABASTO (Solo bodegas permitidas al usuario)
+        let htmlAbasto = '<div class="abasto-grid">';
+        
+        // Filtramos qué bodegas mostrar
+        const bodegasVisibles = perfilActual.rol === 'ADMIN' 
+            ? todasLasBodegas 
+            : todasLasBodegas.filter(b => perfilActual.bodegas_asignadas.includes(b.id));
+
+        bodegasVisibles.forEach(bod => {
+            const ocupadosBod = reservas.filter(r => r.hora === horaStr && r.id_bodega === bod.id).length;
+            const cuposBodMax = 2; // Por defecto
+            const dispBod = cuposBodMax - ocupadosBod;
+
+            htmlAbasto += `
+                <div class="bodega-slot">
+                    <small>${bod.nombre}</small><br>
+                    <span class="badge ${dispBod > 0 ? 'green' : 'red'}">${dispBod}</span>
+                    <button class="btn-sm" onclick="prepararCita('${horaStr}', 'ABASTO', '${bod.id}', '${bod.nombre}')" ${dispBod <= 0 ? 'disabled' : ''}>Citar</button>
+                </div>`;
+        });
+        
+        htmlAbasto += '</div>';
+        fila += `<td>${htmlAbasto}</td></tr>`;
+        tbody.innerHTML += fila;
+    }
+}
+
+// Escuchar cambio de fecha para recargar
+document.getElementById('filtro-fecha').addEventListener('change', actualizarTablaAgenda);
