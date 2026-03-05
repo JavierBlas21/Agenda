@@ -21,6 +21,17 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; co
     margin: 0 !important;
     cursor: pointer;
 }
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    transition: background 0.3s;
+}
+
+.btn-sm:hover {
+    opacity: 0.9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
 table { width: 100%; border-collapse: collapse; background: white; }
 th, td { padding: 12px; border: 1px solid #e2e8f0; text-align: center; }
 .badge { padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; }
