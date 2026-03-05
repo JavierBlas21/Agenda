@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Citas - Logística</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="login-overlay" class="overlay">
+        <div class="card login-card">
+            <h2>Acceso al Sistema</h2>
+            <input type="text" id="user-input" placeholder="Usuario">
+            <input type="password" id="pass-input" placeholder="Contraseña">
+            <button id="login-btn">Entrar</button>
+        </div>
+    </div>
+
+    <div class="navbar">
+        <h1>Control de Arribos</h1>
+    </div>
+
+    <div class="container">
+        <section id="user-section" class="hidden">
+            <div class="card">
+                <h3>Nueva Reservación</h3>
+                <input type="text" id="fletera-name" placeholder="Nombre de la Fletera">
+            </div>
+        </section>
+
+        <div class="card">
+            <table id="schedule-table">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Enviado (Libres)</th>
+                        <th>Abasto (Libres)</th>
+                    </tr>
+                </thead>
+                <tbody id="slots-body"></tbody>
+            </table>
+        </div>
+
+        <section id="admin-section" class="hidden">
+            <div id="admin-log" class="card"></div>
+        </section>
+
+        <section id="gestion-accesos" class="hidden">
+            <div class="card">
+                <h3>Crear Nuevo Acceso</h3>
+                <input type="text" id="new-user" placeholder="Nuevo Usuario">
+                <input type="text" id="new-pass" placeholder="Contraseña">
+                <select id="new-role">
+                    <option value="COORDINADOR">Coordinador (Fletera)</option>
+                    <option value="ADMIN">Administrador</option>
+                </select>
+                <button onclick="crearUsuario()">Guardar Acceso</button>
+            </div>
+        </section>
+    </div>
+
+    <div id="print-area" style="display:none;">
+        <div style="text-align:center; font-family:monospace; padding:20px; border:1px solid #000;">
+            <h2>CONFIRMACIÓN DE CITA</h2>
+            <h1 id="p-folio"></h1>
+            <p><strong>Fletera:</strong> <span id="p-fletera"></span></p>
+            <p><strong>Tipo:</strong> <span id="p-tipo"></span></p>
+            <p><strong>Fecha:</strong> <span id="p-fecha"></span></p>
+            <p><strong>Hora:</strong> <span id="p-hora"></span></p>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
