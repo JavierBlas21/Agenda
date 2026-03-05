@@ -9,7 +9,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 let perfilActual = null;
 let datosCitaTemp = {};
 
-// --- 1. INICIO Y CONTROL DE SESIÓN ---
+// --- INICIO ---
 const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -25,7 +25,7 @@ const checkUser = async () => {
                 document.getElementById('admin-controls-agenda').classList.remove('hidden');
                 cargarCatalogosAdmin();
             }
-            // Establecer fecha de hoy por defecto y cargar agenda
+            // Fecha de hoy por defecto
             const fechaInput = document.getElementById('filtro-fecha');
             if(!fechaInput.value) fechaInput.value = new Date().toISOString().split('T')[0];
             actualizarTablaAgenda();
@@ -40,7 +40,7 @@ document.getElementById('login-btn').addEventListener('click', async () => {
     if (error) alert("Error: " + error.message); else checkUser();
 });
 
-// --- 2. GESTIÓN DE CATÁLOGOS Y USUARIOS (ADMIN) ---
+// --- ADMIN ---
 window.guardarBodega = async () => {
     const n = document.getElementById('new-bodega').value;
     if(!n) return;
@@ -70,11 +70,8 @@ window.registrarUsuario = async () => {
     if (error) return alert("Error Auth: " + error.message);
 
     await supabase.from('perfiles').insert([{ 
-        id: data.user.id, 
-        usuario: nombre, 
-        rol: 'COORDINADOR', 
-        id_fletera: idFletera, 
-        bodegas_asignadas: bods 
+        id: data.user.id, usuario: nombre, rol: 'COORDINADOR', 
+        id_fletera: idFletera, bodegas_asignadas: bods 
     }]);
     
     window.prompt("COORDINADOR CREADO. Copia la contraseña temporal:", pass);
@@ -88,12 +85,12 @@ async function cargarCatalogosAdmin() {
     
     const { data: b } = await supabase.from('bodegas').select('*').order('nombre');
     document.getElementById('bodegas-check-list').innerHTML = b.map(x => `
-        <label style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" name="bodega-check" value="${x.id}" style="width:auto;"> ${x.nombre}
+        <label>
+            <input type="checkbox" name="bodega-check" value="${x.id}"> ${x.nombre}
         </label>`).join('');
 }
 
-// --- 3. AGENDA Y DISPONIBILIDAD ---
+// --- AGENDA (EL MOTOR) ---
 window.habilitarDiaCompleto = async () => {
     const f = document.getElementById('filtro-fecha').value;
     if(!f) return alert("Selecciona una fecha");
@@ -108,15 +105,12 @@ window.habilitarDiaCompleto = async () => {
 
     const { error } = await supabase.from('disponibilidad').upsert(regs, { onConflict: 'id_bodega,fecha,hora' });
     if (error) alert("Error: " + error.message); 
-    else { alert("Día habilitado."); actualizarTablaAgenda(); }
+    else { alert("Día habilitado correctamente."); actualizarTablaAgenda(); }
 };
 
 window.cambiarCupo = async (idB, fec, hor, val) => {
     await supabase.from('disponibilidad').upsert({ 
-        id_bodega: idB || null, 
-        fecha: fec, 
-        hora: hor, 
-        cupos_totales: parseInt(val) 
+        id_bodega: idB || null, fecha: fec, hora: hor, cupos_totales: parseInt(val) 
     }, { onConflict: 'id_bodega,fecha,hora' });
 };
 
@@ -125,14 +119,14 @@ async function actualizarTablaAgenda() {
     if(!f) return;
 
     const tbody = document.getElementById('agenda-body');
-    tbody.innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3">Cargando datos...</td></tr>';
 
     const { data: bods } = await supabase.from('bodegas').select('*').order('nombre');
     const { data: res } = await supabase.from('reservaciones').select('*').eq('fecha', f).eq('estatus', 'ACTIVA');
     const { data: disp } = await supabase.from('disponibilidad').select('*').eq('fecha', f);
 
     if(!disp || disp.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="color:red; padding:20px;">Día no habilitado. El Admin debe pulsar "Habilitar este Día".</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="color:#856404; background:#fff3cd; padding:20px;">⚠️ Este día no tiene cupos configurados. Presione "Habilitar este Día".</td></tr>';
         return;
     }
 
@@ -141,17 +135,17 @@ async function actualizarTablaAgenda() {
         const hr = `${h.toString().padStart(2,'0')}:00:00`;
         const hrL = hr.substring(0,5);
         
-        // COLUMNA ENVÍO
-        const dE = disp.find(d => !d.id_bodega && d.hora === hr);
+        // ENVÍO
+        const dE = disp.find(d => d.id_bodega === null && d.hora === hr);
         const cE = dE ? dE.cupos_totales : 0;
         const oE = res.filter(r => r.hora === hr && r.tipo === 'ENVIO').length;
         const lE = cE - oE;
 
         let tdEnvio = (perfilActual.rol === 'ADMIN') ? 
-            `<div class="admin-edit-cupo">Capacidad: <input type="number" value="${cE}" onchange="cambiarCupo(null,'${f}','${hr}',this.value)"><br><small>Libres: ${lE}</small></div>` : 
+            `<div class="admin-edit-cupo">Cap: <input type="number" value="${cE}" onchange="cambiarCupo(null,'${f}','${hr}',this.value)"><br><small>Libres: ${lE}</small></div>` : 
             `<span class="badge ${lE>0?'green':'red'}">${lE} Libres</span><br><button class="btn-sm" onclick="prepararCita('${hr}','ENVIO')" ${lE<=0?'disabled':''}>Reservar</button>`;
 
-        // COLUMNA ABASTO
+        // ABASTO
         let hA = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">';
         const bVis = perfilActual.rol==='ADMIN' ? bods : bods.filter(x => perfilActual.bodegas_asignadas.includes(x.id));
         
@@ -161,7 +155,7 @@ async function actualizarTablaAgenda() {
             const oA = res.filter(r => r.hora === hr && r.id_bodega === xb.id).length;
             const lA = cA - oA;
 
-            hA += `<div class="admin-edit-cupo" style="border-style:solid; border-width:1px;">
+            hA += `<div class="admin-edit-cupo">
                 <strong>${xb.nombre}</strong><br>
                 ${perfilActual.rol==='ADMIN' ? 
                     `Cap: <input type="number" value="${cA}" onchange="cambiarCupo('${xb.id}','${f}','${hr}',this.value)"><br><small>Libres: ${lA}</small>` : 
@@ -175,15 +169,8 @@ async function actualizarTablaAgenda() {
     tbody.innerHTML = html;
 }
 
-// --- 4. RESERVACIONES Y MODAL ---
+// --- MODAL Y RESERVAS ---
 window.prepararCita = (h, t, idB=null, nB='') => {
-    // Validar tiempo si es hoy
-    const f = document.getElementById('filtro-fecha').value;
-    const ahora = new Date();
-    if(f === ahora.toISOString().split('T')[0]){
-        if(parseInt(h.split(':')[0]) <= ahora.getHours()) return alert("Hora vencida.");
-    }
-
     datosCitaTemp = { h, t, idB, nB };
     document.getElementById('modal-titulo').innerText = `${t} ${nB}`;
     document.getElementById('modal-detalles').innerText = `Horario: ${h.substring(0,5)} hrs`;
@@ -192,9 +179,6 @@ window.prepararCita = (h, t, idB=null, nB='') => {
 
 window.cerrarModal = () => {
     document.getElementById('modal-cita').classList.add('hidden');
-    document.getElementById('in-operador').value = '';
-    document.getElementById('in-placa').value = '';
-    document.getElementById('in-tarjeta').value = '';
 };
 
 window.confirmarCita = async () => {
@@ -208,28 +192,15 @@ window.confirmarCita = async () => {
     const fol = `${datosCitaTemp.t[0]}-${p.slice(-4)}-${Math.random().toString(36).slice(-4).toUpperCase()}`;
 
     const { error } = await supabase.from('reservaciones').insert([{ 
-        folio: fol, 
-        id_usuario: (await supabase.auth.getUser()).data.user.id, 
-        id_fletera: perfilActual.id_fletera, 
-        id_bodega: datosCitaTemp.idB, 
-        fecha: f, 
-        hora: datosCitaTemp.h, 
-        placa_vehiculo: p, 
-        nombre_operador: o, 
-        num_tarjeta: t, 
-        tipo: datosCitaTemp.t 
+        folio: fol, id_usuario: (await supabase.auth.getUser()).data.user.id, 
+        id_fletera: perfilActual.id_fletera, id_bodega: datosCitaTemp.idB, 
+        fecha: f, hora: datosCitaTemp.h, placa_vehiculo: p, nombre_operador: o, num_tarjeta: t, tipo: datosCitaTemp.t 
     }]);
 
-    if(error) {
-        alert("Error: Ya existe una cita para esta placa u operador hoy.");
-    } else {
-        alert("Cita agendada. Folio: " + fol);
-        cerrarModal();
-        actualizarTablaAgenda();
-    }
+    if(error) alert("Error: La placa u operador ya tienen cita hoy.");
+    else { alert("Cita agendada."); cerrarModal(); actualizarTablaAgenda(); }
 };
 
-// --- EVENTOS ---
 document.getElementById('logout-btn').onclick = () => { supabase.auth.signOut(); location.reload(); };
 document.getElementById('filtro-fecha').onchange = actualizarTablaAgenda;
 

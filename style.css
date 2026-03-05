@@ -5,6 +5,22 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; co
 .container { padding: 2rem 5%; max-width: 1200px; margin: auto; }
 .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 1rem; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.check-list label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #475569;
+}
+
+.check-list input[type="checkbox"] {
+    width: 18px !important; /* Forzamos tamaño pequeño */
+    height: 18px !important;
+    margin: 0 !important;
+    cursor: pointer;
+}
 table { width: 100%; border-collapse: collapse; background: white; }
 th, td { padding: 12px; border: 1px solid #e2e8f0; text-align: center; }
 .badge { padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; }
@@ -18,16 +34,3 @@ button { cursor: pointer; border: none; padding: 10px 15px; border-radius: 6px; 
 .check-list { max-height: 120px; overflow-y: auto; border: 1px solid #e2e8f0; padding: 10px; margin-bottom: 10px; }
 .admin-edit-cupo { background: #f8fafc; padding: 5px; border-radius: 4px; border: 1px dashed #3b82f6; font-size: 0.75rem; }
 .admin-edit-cupo input { width: 45px; padding: 2px; text-align: center; margin: 0; }
-
-.check-list label {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Espacio entre el cuadro y el nombre */
-    padding: 5px 0;
-    cursor: pointer;
-}
-
-.check-list input[type="checkbox"] {
-    width: auto; /* Evita que el checkbox crezca al 100% */
-    margin: 0;
-}

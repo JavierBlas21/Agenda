@@ -34,12 +34,17 @@
                 </div>
                 <div class="card">
                     <h3>👥 Usuarios</h3>
-                    <input type="text" id="user-fullname" placeholder="Nombre">
-                    <input type="email" id="user-email" placeholder="Correo">
+                    <input type="text" id="user-fullname" placeholder="Nombre Completo">
+                    <input type="email" id="user-email" placeholder="Correo Electrónico">
                     <select id="select-fletera-user"></select>
-                    <label style="font-weight: bold; display: block; margin-top: 10px;">Asignar Bodegas:</label>
-                    <div id="bodegas-check-list" class="check-list"></div>
-                    <button onclick="registrarUsuario()">Crear Acceso</button>
+                    
+                    <div style="margin-top: 15px;">
+                        <strong style="display: block; margin-bottom: 10px; color: #1e293b;">Asignar Bodegas Permitidas:</strong>
+                        <div id="bodegas-check-list" class="check-list">
+                            </div>
+                    </div>
+                    
+                    <button onclick="registrarUsuario()" style="width: 100%; margin-top: 10px;">Crear Acceso</button>
                 </div>
             </div>
         </section>
