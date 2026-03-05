@@ -109,9 +109,28 @@ window.habilitarDiaCompleto = async () => {
 };
 
 window.cambiarCupo = async (idB, fec, hor, val) => {
-    await supabase.from('disponibilidad').upsert({ 
-        id_bodega: idB || null, fecha: fec, hora: hor, cupos_totales: parseInt(val) 
-    }, { onConflict: 'id_bodega,fecha,hora' });
+    const nuevoValor = parseInt(val);
+    if (isNaN(nuevoValor)) return;
+
+    // Usamos console.log para monitorear en la consola del navegador (F12)
+    console.log(`Actualizando: Bodega ${idB}, Fecha ${fec}, Hora ${hor} a ${nuevoValor} cupos`);
+
+    const { error } = await supabase
+        .from('disponibilidad')
+        .upsert({ 
+            id_bodega: idB || null, 
+            fecha: fec, 
+            hora: hor, 
+            cupos_totales: nuevoValor 
+        }, { onConflict: 'id_bodega,fecha,hora' });
+
+    if (error) {
+        console.error("Error al guardar cupo:", error.message);
+        alert("No se pudo guardar el cambio: " + error.message);
+    } else {
+        // Opcional: Mostrar una pequeña notificación visual de "Guardado"
+        console.log("Cupo guardado exitosamente");
+    }
 };
 
 async function actualizarTablaAgenda() {
