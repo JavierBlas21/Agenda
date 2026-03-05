@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Logístico de Arribos</title>
+    <title>Logistics Pro - Sistema de Arribos</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,47 +17,45 @@
     </div>
 
     <nav class="navbar">
-        <h1>Control de Citas</h1>
-        <div>
-            <span id="user-display"></span>
-            <button id="logout-btn" class="btn-danger">Cerrar Sesión</button>
-        </div>
+        <h1>Control de Arribos</h1>
+        <div><span id="user-display"></span> <button id="logout-btn" class="btn-danger">Salir</button></div>
     </nav>
 
     <div class="container">
         <section id="admin-view" class="hidden">
             <div class="grid">
                 <div class="card">
-                    <h3>📦 Bodegas y Fleteras</h3>
-                    <input type="text" id="new-bodega" placeholder="Nombre Bodega">
+                    <h3>📦 Catálogos</h3>
+                    <input type="text" id="new-bodega" placeholder="Nueva Bodega">
                     <button onclick="guardarBodega()">+ Bodega</button>
                     <hr>
-                    <input type="text" id="new-fletera" placeholder="Nombre Fletera">
+                    <input type="text" id="new-fletera" placeholder="Nueva Fletera">
                     <button onclick="guardarFletera()">+ Fletera</button>
                 </div>
                 <div class="card">
-                    <h3>👥 Usuarios Coordinadores</h3>
-                    <input type="text" id="user-fullname" placeholder="Nombre completo">
-                    <input type="email" id="user-email" placeholder="Correo electrónico">
+                    <h3>👥 Usuarios</h3>
+                    <input type="text" id="user-fullname" placeholder="Nombre">
+                    <input type="email" id="user-email" placeholder="Correo">
                     <select id="select-fletera-user"></select>
-                    <div id="bodegas-check-list" class="check-list">
-                        </div>
+                    <div id="bodegas-check-list" class="check-list"></div>
                     <button onclick="registrarUsuario()">Crear Acceso</button>
                 </div>
             </div>
         </section>
 
         <section id="agenda-view" class="hidden">
+            <div id="admin-controls-agenda" class="hidden card" style="background: #fff3cd;">
+                <button onclick="habilitarDiaCompleto()" class="btn-success">Habilitar este Día (Generar Cupos)</button>
+            </div>
             <div class="card">
-                <h3>📅 Agenda de Citas</h3>
-                <input type="date" id="filtro-fecha">
+                <h3>📅 Agenda: <input type="date" id="filtro-fecha"></h3>
                 <div class="table-scroll">
-                    <table id="main-table">
+                    <table>
                         <thead>
                             <tr>
                                 <th>Hora</th>
-                                <th>Envío (Libres)</th>
-                                <th id="header-abasto">Abasto (Por Bodega)</th>
+                                <th>Envío (Universal)</th>
+                                <th>Abasto (Asignado)</th>
                             </tr>
                         </thead>
                         <tbody id="agenda-body"></tbody>
@@ -69,13 +67,13 @@
 
     <div id="modal-cita" class="overlay hidden">
         <div class="card modal-content">
-            <h3 id="modal-titulo">Nueva Reservación</h3>
+            <h3 id="modal-titulo">Nueva Cita</h3>
             <p id="modal-detalles"></p>
             <input type="text" id="in-operador" placeholder="Nombre Operador">
             <input type="text" id="in-placa" placeholder="Placas">
             <input type="text" id="in-tarjeta" placeholder="Núm. Tarjeta">
-            <div class="btns">
-                <button onclick="confirmarCita()" class="btn-success">Agendar</button>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button onclick="confirmarCita()" class="btn-success">Confirmar</button>
                 <button onclick="cerrarModal()" class="btn-danger">Cancelar</button>
             </div>
         </div>
