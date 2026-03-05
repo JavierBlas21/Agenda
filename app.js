@@ -217,3 +217,103 @@ async function actualizarTablaAgenda() {
 
 // Escuchar cambio de fecha para recargar
 document.getElementById('filtro-fecha').addEventListener('change', actualizarTablaAgenda);
+
+// --- 6. GESTIÓN DE RESERVACIONES (MODAL Y GUARDADO) ---
+
+let datosCitaTemporal = {};
+
+window.prepararCita = (hora, tipo, idBodega = null, nombreBodega = '') => {
+    // Verificar si la hora ya pasó (Solo si es para el día de hoy)
+    const fechaSeleccionada = document.getElementById('filtro-fecha').value;
+    const ahora = new Date();
+    const hoy = ahora.toISOString().split('T')[0];
+    
+    if (fechaSeleccionada === hoy) {
+        const horaCita = parseInt(hora.split(':')[0]);
+        if (ahora.getHours() >= horaCita) {
+            return alert("No puedes agendar en un horario que ya pasó.");
+        }
+    }
+
+    datosCitaTemporal = { hora, tipo, idBodega, nombreBodega };
+    
+    document.getElementById('modal-titulo').innerText = `Reservar: ${tipo} ${nombreBodega ? '- ' + nombreBodega : ''}`;
+    document.getElementById('modal-detalles').innerText = `Horario: ${hora.substring(0,5)} hrs`;
+    document.getElementById('modal-cita').classList.remove('hidden');
+};
+
+window.cerrarModal = () => {
+    document.getElementById('modal-cita').classList.add('hidden');
+    document.getElementById('in-operador').value = '';
+    document.getElementById('in-placa').value = '';
+    document.getElementById('in-tarjeta').value = '';
+};
+
+window.confirmarCita = async () => {
+    const operador = document.getElementById('in-operador').value.toUpperCase();
+    const placa = document.getElementById('in-placa').value.toUpperCase();
+    const tarjeta = document.getElementById('in-tarjeta').value.toUpperCase();
+    const fecha = document.getElementById('filtro-fecha').value;
+
+    if (!operador || !placa || !tarjeta) return alert("Todos los campos son obligatorios.");
+
+    // Generar Folio Único: TIPO-HORA-RANDOM
+    const randomID = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const folio = `${datosCitaTemporal.tipo[0]}-${datosCitaTemporal.hora.replace(/:/g,'').substring(0,4)}-${randomID}`;
+
+    const { error } = await supabase.from('reservaciones').insert([{
+        folio: folio,
+        id_usuario: (await supabase.auth.getUser()).data.user.id,
+        id_fletera: perfilActual.id_fletera, // El Admin deberá tener una fletera asignada para agendar
+        id_bodega: datosCitaTemporal.idBodega,
+        fecha: fecha,
+        hora: datosCitaTemporal.hora,
+        placa_vehiculo: placa,
+        nombre_operador: operador,
+        num_tarjeta: tarjeta,
+        tipo: datosCitaTemporal.tipo
+    }]);
+
+    if (error) {
+        if (error.code === '23505') alert("Error: La placa o el operador ya tienen una cita asignada para este día.");
+        else alert("Error al reservar: " + error.message);
+    } else {
+        alert("Cita confirmada con éxito.");
+        imprimirTicket(folio, operador, placa, tarjeta, fecha, datosCitaTemporal.hora, datosCitaTemporal.tipo, datosCitaTemporal.nombreBodega);
+        cerrarModal();
+        actualizarTablaAgenda();
+    }
+};
+
+function imprimirTicket(folio, op, pl, tar, fec, hor, tipo, bod) {
+    const vent = window.open('', '_blank');
+    vent.document.write(`
+        <html>
+        <head>
+            <title>Ticket ${folio}</title>
+            <style>
+                body { font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
+                .box { border: 2px solid #000; padding: 15px; display: inline-block; }
+                .folio { font-size: 28px; font-weight: bold; margin: 10px 0; background: #eee; }
+                p { text-align: left; margin: 5px 0; }
+            </style>
+        </head>
+        <body onload="window.print(); window.close();">
+            <div class="box">
+                <h2>CONFIRMACIÓN DE ARRIBO</h2>
+                <div class="folio">${folio}</div>
+                <p><strong>OPERACIÓN:</strong> ${tipo} ${bod}</p>
+                <p><strong>FECHA:</strong> ${fec}</p>
+                <p><strong>HORA:</strong> ${hor.substring(0,5)} hrs</p>
+                <hr>
+                <p><strong>OPERADOR:</strong> ${op}</p>
+                <p><strong>PLACA:</strong> ${pl}</p>
+                <p><strong>TARJETA:</strong> ${tar}</p>
+                <br>
+                <small>Presente este folio al llegar a caseta.</small>
+            </div>
+        </body>
+        </html>
+    `);
+    vent.document.close();
+}
