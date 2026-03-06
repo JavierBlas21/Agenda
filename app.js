@@ -194,13 +194,16 @@ window.prepararCita = (h, t, idB=null, nB='') => {
     const ahora = new Date();
     const horaCita = parseInt(h.split(':')[0]);
     
-    // Bloquear si pasó la hora y es Coordinador
-    if(f === ahora.toISOString().split('T')[0] && horaCita <= ahora.getHours() && perfilActual.rol === 'COORDINADOR') {
-        return alert("Vencido. Contacte a Báscula para emergencia.");
+    // MODIFICACIÓN: Si es ADMIN, no le bloqueamos la hora aunque ya haya pasado
+    if(f === ahora.toISOString().split('T')[0] && horaCita <= ahora.getHours()) {
+        if(perfilActual.rol === 'COORDINADOR') {
+            return alert("Vencido. Contacte a Báscula para emergencia.");
+        }
+        // Si es ADMIN o BASCULA, dejamos que pase (aparecerá como emergencia)
     }
 
     datosCitaTemp = { h, t, idB, nB };
-    document.getElementById('modal-titulo').innerText = `${t} ${nB} ${perfilActual.rol!=='COORDINADOR'?'(EMERGENCIA)':''}`;
+    document.getElementById('modal-titulo').innerText = `${t} ${nB} ${perfilActual.rol!=='COORDINADOR'?'(INTERNO/ADMIN)':''}`;
     document.getElementById('modal-detalles').innerText = `${h.substring(0,5)} hrs`;
     document.getElementById('modal-cita').classList.remove('hidden');
 };
@@ -212,17 +215,36 @@ window.confirmarCita = async () => {
     const ton = parseInt(document.getElementById('in-toneladas').value);
     const f = document.getElementById('filtro-fecha').value;
 
-    const fol = `${datosCitaTemp.t[0]}-${p.slice(-4)}-${Math.random().toString(36).slice(-3).toUpperCase()}`;
+    // Folio dinámico: Si es Admin, le ponemos una "A" de prefijo
+    const prefijo = perfilActual.rol === 'ADMIN' ? 'A' : datosCitaTemp.t[0];
+    const fol = `${prefijo}-${p.slice(-4)}-${Math.random().toString(36).slice(-3).toUpperCase()}`;
+
+    // Obtenemos el ID del usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
 
     const { error } = await supabase.from('reservaciones').insert([{ 
-        folio: fol, id_usuario: (await supabase.auth.getUser()).data.user.id, 
-        id_fletera: perfilActual.id_fletera, id_bodega: datosCitaTemp.idB, 
-        fecha: f, hora: datosCitaTemp.h, placa_vehiculo: p, nombre_operador: o, num_tarjeta: t, 
-        toneladas: ton, tipo: datosCitaTemp.t 
+        folio: fol, 
+        id_usuario: user.id, 
+        // Si es Coordinador usa su fletera, si es Admin usa NULL
+        id_fletera: perfilActual.rol === 'COORDINADOR' ? perfilActual.id_fletera : null, 
+        id_bodega: datosCitaTemp.idB, 
+        fecha: f, 
+        hora: datosCitaTemp.h, 
+        placa_vehiculo: p, 
+        nombre_operador: o, 
+        num_tarjeta: t, 
+        toneladas: ton, 
+        tipo: datosCitaTemp.t 
     }]);
 
-    if(error) alert("Error: Datos duplicados hoy.");
-    else { alert("Agendada: " + fol); cerrarModal(); actualizarTodo(); }
+    if(error) {
+        console.error(error);
+        alert("Error al agendar. Verifica que no existan duplicados.");
+    } else { 
+        alert("Agendada con éxito: " + fol); 
+        cerrarModal(); 
+        actualizarTodo(); 
+    }
 };
 
 // --- OTROS MÉTODOS ---
