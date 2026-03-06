@@ -139,7 +139,7 @@ async function cargarListadoCitas() {
 
         html += `
             <div class="card-cita ${c.asistio ? 'asistio' : ''}">
-                <strong>${c.hora.substring(0,5)} | ${c.num_tarjeta}</strong><br>
+                <strong>${c.hora.substring(0,5)} | ${c.num_tarjeta} | ${c.folio}</strong><br>
                 <small>${c.empresas_fleteras?.nombre || 'INTERNO'} | ${c.toneladas} TON</small><br>
                 <div style="margin-top:5px; display:flex; gap:5px;">
                     <button class="btn-sm" onclick='imprimirTicket(${JSON.stringify(c)})'>🎫 Ticket</button>
