@@ -60,17 +60,31 @@ async function actualizarTablaAgenda() {
         const hr = `${h.toString().padStart(2,'0')}:00:00`;
         const hrL = hr.substring(0,5);
         
-        // ENVÍO
+        // --- SECCIÓN ENVÍO ---
         const dE = disp.find(d => !d.id_bodega && d.hora === hr);
         const cE = dE ? dE.cupos_totales : 0;
         const oE = res.filter(r => r.hora === hr && r.tipo === 'ENVIO').length;
         const lE = cE - oE;
 
-        let tdEnvio = (perfilActual.rol === 'ADMIN') ? 
-            `<div class="admin-edit-cupo">Cap: <input type="number" value="${cE}" onchange="cambiarCupo(null,'${f}','${hr}',this.value)"><br><small>Libres: ${lE}</small></div>` : 
-            `<span class="badge ${lE>0?'green':'red'}">${lE} Libres</span><br><button class="btn-sm" onclick="prepararCita('${hr}','ENVIO')" ${lE<=0?'disabled':''}>Reservar</button>`;
+        let tdEnvio = "";
+        if (perfilActual.rol === 'ADMIN') {
+            // Admin: Input de Capacidad + Botón Verde de Agendar
+            tdEnvio = `
+                <div class="admin-edit-cupo">
+                    Cap: <input type="number" value="${cE}" onchange="cambiarCupo(null,'${f}','${hr}',this.value)">
+                    <br><small>Libres: ${lE}</small>
+                </div>
+                <button class="btn-sm btn-success" style="width:100%; margin-top:5px;" onclick="prepararCita('${hr}','ENVIO')">+ Agendar</button>
+            `;
+        } else {
+            // Otros: Solo botón de Reservar (con validación de cupos)
+            tdEnvio = `
+                <span class="badge ${lE>0?'green':'red'}">${lE} Libres</span><br>
+                <button class="btn-sm" onclick="prepararCita('${hr}','ENVIO')" ${lE<=0?'disabled':''}>Reservar</button>
+            `;
+        }
 
-        // ABASTO
+        // --- SECCIÓN ABASTO ---
         let hA = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">';
         const bVis = (perfilActual.rol === 'ADMIN' || perfilActual.rol === 'BASCULA') ? bods : bods.filter(x => (perfilActual.bodegas_asignadas || []).includes(x.id));
         
@@ -81,13 +95,25 @@ async function actualizarTablaAgenda() {
             const lA = cA - oA;
 
             hA += `<div class="admin-edit-cupo">
-                <strong>${xb.nombre}</strong><br>
-                ${perfilActual.rol === 'ADMIN' ? 
-                    `Cap: <input type="number" value="${cA}" onchange="cambiarCupo('${xb.id}','${f}','${hr}',this.value)">` : 
-                    `<span class="badge ${lA>0?'green':'red'}" style="font-size:10px">${lA} Libres</span><button class="btn-sm" onclick="prepararCita('${hr}','ABASTO','${xb.id}','${xb.nombre}')" ${lA<=0?'disabled':''}>Citar</button>`
-                }</div>`;
+                <strong>${xb.nombre}</strong><br>`;
+            
+            if (perfilActual.rol === 'ADMIN') {
+                // Admin: Input + Botón verde pequeño para bodega
+                hA += `
+                    Cap: <input type="number" value="${cA}" onchange="cambiarCupo('${xb.id}','${f}','${hr}',this.value)">
+                    <button class="btn-sm btn-success" style="display:block; width:100%; margin-top:5px; font-size:10px;" onclick="prepararCita('${hr}','ABASTO','${xb.id}','${xb.nombre}')">+ Citar</button>
+                `;
+            } else {
+                // Otros: Badge de Libres + Botón azul normal
+                hA += `
+                    <span class="badge ${lA>0?'green':'red'}" style="font-size:10px">${lA} Libres</span>
+                    <button class="btn-sm" onclick="prepararCita('${hr}','ABASTO','${xb.id}','${xb.nombre}')" ${lA<=0?'disabled':''}>Citar</button>
+                `;
+            }
+            hA += `</div>`;
         });
         hA += '</div>';
+
         html += `<tr><td><strong>${hrL}</strong></td><td>${tdEnvio}</td><td>${hA}</td></tr>`;
     }
     tbody.innerHTML = html;
