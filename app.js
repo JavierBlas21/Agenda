@@ -1,130 +1,57 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-// --- CONFIGURACIÓN ---
 const SUPABASE_URL = 'https://zmvxfulnlhlunzjropwv.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_lMMPid76_7wXStQeyzWPkw_PvTwQ5lu'
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 let perfilActual = null;
 let datosCitaTemp = {};
 
-// --- 1. INICIO Y CONTROL DE SESIÓN ---
+// --- 1. SESIÓN Y ROLES ---
 const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-        const { data: perfil } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
-        if (perfil) {
-            perfilActual = perfil;
-            document.getElementById('login-overlay').classList.add('hidden');
-            document.getElementById('user-display').innerText = `${perfil.usuario} (${perfil.rol})`;
-            document.getElementById('agenda-view').classList.remove('hidden');
-            
-            if (perfil.rol === 'ADMIN') {
-                document.getElementById('admin-view').classList.remove('hidden');
-                document.getElementById('admin-controls-agenda').classList.remove('hidden');
-                cargarCatalogosAdmin();
-            }
-            // Fecha de hoy por defecto
-            const fechaInput = document.getElementById('filtro-fecha');
-            if(!fechaInput.value) fechaInput.value = new Date().toISOString().split('T')[0];
-            actualizarTablaAgenda();
+    if (!user) return;
+    const { data: perfil } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+    if (perfil) {
+        perfilActual = perfil;
+        document.getElementById('login-overlay').classList.add('hidden');
+        document.getElementById('user-display').innerText = `${perfil.usuario} (${perfil.rol})`;
+        document.getElementById('agenda-view').classList.remove('hidden');
+        
+        if (perfil.rol === 'ADMIN') {
+            document.getElementById('admin-view').classList.remove('hidden');
+            document.getElementById('admin-controls-agenda').classList.remove('hidden');
+            cargarCatalogosAdmin();
         }
+        
+        const fInput = document.getElementById('filtro-fecha');
+        if(!fInput.value) fInput.value = new Date().toISOString().split('T')[0];
+        actualizarTodo();
     }
 };
 
-document.getElementById('login-btn').addEventListener('click', async () => {
-    const email = document.getElementById('email-input').value;
-    const pass = document.getElementById('pass-input').value;
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) alert("Error: " + error.message); else checkUser();
-});
-
-// --- 2. GESTIÓN DE CATÁLOGOS Y USUARIOS (ADMIN) ---
-window.guardarBodega = async () => {
-    const n = document.getElementById('new-bodega').value;
-    if(!n) return;
-    await supabase.from('bodegas').insert([{ nombre: n }]);
-    document.getElementById('new-bodega').value = '';
-    cargarCatalogosAdmin();
+window.toggleCamposUsuario = () => {
+    const rol = document.getElementById('select-rol-user').value;
+    document.getElementById('campos-coordinador').style.display = (rol === 'COORDINADOR') ? 'block' : 'none';
 };
 
-window.guardarFletera = async () => {
-    const n = document.getElementById('new-fletera').value;
-    if(!n) return;
-    await supabase.from('empresas_fleteras').insert([{ nombre: n }]);
-    document.getElementById('new-fletera').value = '';
-    cargarCatalogosAdmin();
+// --- 2. MOTOR DE DATOS ---
+window.actualizarTodo = () => {
+    actualizarTablaAgenda();
+    cargarListadoCitas();
 };
 
-window.registrarUsuario = async () => {
-    const email = document.getElementById('user-email').value;
-    const nombre = document.getElementById('user-fullname').value;
-    const idFletera = document.getElementById('select-fletera-user').value;
-    const pass = Math.random().toString(36).slice(-8);
-    const bods = Array.from(document.querySelectorAll('input[name="bodega-check"]:checked')).map(c => c.value);
-    
-    if(!email || !nombre || bods.length === 0) return alert("Faltan datos.");
-
-    const { data, error } = await supabase.auth.signUp({ email, password: pass });
-    if (error) return alert("Error Auth: " + error.message);
-
-    await supabase.from('perfiles').insert([{ 
-        id: data.user.id, usuario: nombre, rol: 'COORDINADOR', 
-        id_fletera: idFletera, bodegas_asignadas: bods 
-    }]);
-    
-    window.prompt("COORDINADOR CREADO. Copia la contraseña:", pass);
-    document.getElementById('user-email').value = '';
-    document.getElementById('user-fullname').value = '';
-};
-
-async function cargarCatalogosAdmin() {
-    const { data: f } = await supabase.from('empresas_fleteras').select('*').order('nombre');
-    document.getElementById('select-fletera-user').innerHTML = f.map(x => `<option value="${x.id}">${x.nombre}</option>`).join('');
-    const { data: b } = await supabase.from('bodegas').select('*').order('nombre');
-    document.getElementById('bodegas-check-list').innerHTML = b.map(x => `<label><input type="checkbox" name="bodega-check" value="${x.id}"> ${x.nombre}</label>`).join('');
-}
-
-// --- 3. MOTOR DE DISPONIBILIDAD Y CUPOS (GUARDADO FORZADO) ---
-window.habilitarDiaCompleto = async () => {
+async function actualizarTablaAgenda() {
     const f = document.getElementById('filtro-fecha').value;
-    if(!f) return alert("Selecciona fecha");
-    const { data: b } = await supabase.from('bodegas').select('*');
-    const regs = [];
-    for(let h=0; h<24; h++) {
-        const hr = `${h.toString().padStart(2,'0')}:00:00`;
-        regs.push({ fecha: f, hora: hr, id_bodega: null, cupos_totales: 5 });
-        b.forEach(x => regs.push({ fecha: f, hora: hr, id_bodega: x.id, cupos_totales: 2 }));
-    }
-    const { error } = await supabase.from('disponibilidad').upsert(regs, { onConflict: 'id_bodega,fecha,hora' });
-    if (error) alert(error.message); else { alert("Día listo."); actualizarTablaAgenda(); }
-};
-
-window.cambiarCupo = async (idB, fec, hor, val) => {
-    const nuevoValor = parseInt(val);
-    const idBodega = (idB === "null" || idB === null || idB === "") ? null : idB;
-
-    const { error } = await supabase.from('disponibilidad').upsert({ 
-        id_bodega: idBodega, fecha: fec, hora: hor, cupos_totales: nuevoValor 
-    }, { onConflict: 'id_bodega,fecha,hora' });
-
-    if (error) alert("Error al guardar: " + error.message);
-    else console.log("Cupo actualizado en la nube.");
-};
-
-window.actualizarTablaAgenda = async () => {
-    const f = document.getElementById('filtro-fecha').value;
-    if(!f) return;
     const tbody = document.getElementById('agenda-body');
-    tbody.innerHTML = '<tr><td colspan="3">Actualizando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
 
     const { data: bods } = await supabase.from('bodegas').select('*').order('nombre');
     const { data: res } = await supabase.from('reservaciones').select('*').eq('fecha', f).eq('estatus', 'ACTIVA');
     const { data: disp } = await supabase.from('disponibilidad').select('*').eq('fecha', f);
 
     if(!disp || disp.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="color:red; background:#fff3cd; padding:15px;">⚠️ Día no habilitado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="color:red; background:#fff3cd; padding:15px;">Día no habilitado.</td></tr>';
         return;
     }
 
@@ -144,8 +71,8 @@ window.actualizarTablaAgenda = async () => {
             `<span class="badge ${lE>0?'green':'red'}">${lE} Libres</span><br><button class="btn-sm" onclick="prepararCita('${hr}','ENVIO')" ${lE<=0?'disabled':''}>Reservar</button>`;
 
         // ABASTO
-        let hA = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">';
-        const bVis = perfilActual.rol==='ADMIN' ? bods : bods.filter(x => perfilActual.bodegas_asignadas.includes(x.id));
+        let hA = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">';
+        const bVis = (perfilActual.rol === 'ADMIN' || perfilActual.rol === 'BASCULA') ? bods : bods.filter(x => (perfilActual.bodegas_asignadas || []).includes(x.id));
         
         bVis.forEach(xb => {
             const dA = disp.find(d => d.id_bodega === xb.id && d.hora === hr);
@@ -155,46 +82,186 @@ window.actualizarTablaAgenda = async () => {
 
             hA += `<div class="admin-edit-cupo">
                 <strong>${xb.nombre}</strong><br>
-                ${perfilActual.rol==='ADMIN' ? 
-                    `Cap: <input type="number" value="${cA}" onchange="cambiarCupo('${xb.id}','${f}','${hr}',this.value)"><br><small>Libres: ${lA}</small>` : 
+                ${perfilActual.rol === 'ADMIN' ? 
+                    `Cap: <input type="number" value="${cA}" onchange="cambiarCupo('${xb.id}','${f}','${hr}',this.value)">` : 
                     `<span class="badge ${lA>0?'green':'red'}" style="font-size:10px">${lA} Libres</span><button class="btn-sm" onclick="prepararCita('${hr}','ABASTO','${xb.id}','${xb.nombre}')" ${lA<=0?'disabled':''}>Citar</button>`
                 }</div>`;
         });
         hA += '</div>';
-        html += `<tr><td style="font-weight:bold;">${hrL}</td><td>${tdEnvio}</td><td>${hA}</td></tr>`;
+        html += `<tr><td><strong>${hrL}</strong></td><td>${tdEnvio}</td><td>${hA}</td></tr>`;
     }
     tbody.innerHTML = html;
+}
+
+// --- 3. LISTADO DE ARRIBOS Y TICKET ---
+async function cargarListadoCitas() {
+    const f = document.getElementById('filtro-fecha').value;
+    const { data: citas } = await supabase.from('reservaciones').select(`*, empresas_fleteras(nombre)`).eq('fecha', f).eq('estatus', 'ACTIVA').order('hora');
+    
+    const container = document.getElementById('listado-citas-container');
+    let totalTon = 0;
+    let html = '';
+
+    citas.forEach(c => {
+        if(c.asistio) totalTon += (c.toneladas || 0);
+        const ahora = new Date();
+        const horaCita = parseInt(c.hora.split(':')[0]);
+        // Validación 1 hora antes para cancelar
+        const puedeCancelar = (perfilActual.rol === 'ADMIN' || (horaCita - ahora.getHours() >= 1));
+
+        html += `
+            <div class="card-cita ${c.asistio ? 'asistio' : ''}">
+                <strong>${c.hora.substring(0,5)} | ${c.folio}</strong><br>
+                <small>${c.empresas_fleteras?.nombre || 'INTERNO'} | ${c.toneladas} TON</small><br>
+                <div style="margin-top:5px; display:flex; gap:5px;">
+                    <button class="btn-sm" onclick='imprimirTicket(${JSON.stringify(c)})'>🎫 Ticket</button>
+                    ${(perfilActual.rol==='BASCULA' || perfilActual.rol==='ADMIN') && !c.asistio ? `<button class="btn-sm btn-success" onclick="confirmarArribo('${c.id}')">OK</button>` : ''}
+                    ${puedeCancelar ? `<button class="btn-sm btn-danger" onclick="cancelarCita('${c.id}')">X</button>` : ''}
+                </div>
+            </div>`;
+    });
+    container.innerHTML = html || 'Sin citas.';
+    document.getElementById('resumen-tonelaje').innerText = `Total Realizado: ${totalTon} TON`;
+}
+
+window.imprimirTicket = (c) => {
+    const v = window.open('', '_blank');
+    v.document.write(`
+        <html><head><style>
+            body { font-family: 'Courier New'; text-align: center; border: 2px solid #000; padding: 20px; width: 300px; }
+            .moctezuma { font-weight: bold; border-bottom: 2px solid #000; margin-bottom: 10px; }
+            .folio { font-size: 26px; font-weight: bold; background: #eee; margin: 10px 0; }
+            p { text-align: left; margin: 4px 0; font-size: 14px; }
+        </style></head>
+        <body onload="window.print(); window.close();">
+            <div class="moctezuma">CEMENTOS MOCTEZUMA</div>
+            <div style="font-size:12px">Logistics Pro - Control Arribo</div>
+            <div class="folio">${c.folio}</div>
+            <p><strong>FECHA:</strong> ${c.fecha} | ${c.hora.substring(0,5)} hrs</p>
+            <p><strong>MOV:</strong> ${c.tipo}</p>
+            <hr>
+            <p><strong>PLACA:</strong> ${c.placa_vehiculo}</p>
+            <p><strong>OP:</strong> ${c.nombre_operador}</p>
+            <p><strong>CARGA:</strong> ${c.toneladas} TON</p>
+            <br><small>Favor de presentar este ticket en Báscula.</small>
+        </body></html>
+    `);
+    v.document.close();
 };
 
-// --- 4. MODAL Y RESERVAS ---
+// --- 4. ACCIONES ---
+window.confirmarArribo = async (id) => {
+    await supabase.from('reservaciones').update({ asistio: true }).eq('id', id);
+    actualizarTodo();
+};
+
+window.cancelarCita = async (id) => {
+    if(confirm("¿Cancelar cita?")) {
+        await supabase.from('reservaciones').update({ estatus: 'CANCELADA' }).eq('id', id);
+        actualizarTodo();
+    }
+};
+
 window.prepararCita = (h, t, idB=null, nB='') => {
+    const f = document.getElementById('filtro-fecha').value;
+    const ahora = new Date();
+    const horaCita = parseInt(h.split(':')[0]);
+    
+    // Bloquear si pasó la hora y es Coordinador
+    if(f === ahora.toISOString().split('T')[0] && horaCita <= ahora.getHours() && perfilActual.rol === 'COORDINADOR') {
+        return alert("Vencido. Contacte a Báscula para emergencia.");
+    }
+
     datosCitaTemp = { h, t, idB, nB };
-    document.getElementById('modal-titulo').innerText = `${t} ${nB}`;
-    document.getElementById('modal-detalles').innerText = `Horario: ${h.substring(0,5)} hrs`;
+    document.getElementById('modal-titulo').innerText = `${t} ${nB} ${perfilActual.rol!=='COORDINADOR'?'(EMERGENCIA)':''}`;
+    document.getElementById('modal-detalles').innerText = `${h.substring(0,5)} hrs`;
     document.getElementById('modal-cita').classList.remove('hidden');
 };
 
-window.cerrarModal = () => document.getElementById('modal-cita').classList.add('hidden');
-
 window.confirmarCita = async () => {
-    const f = document.getElementById('filtro-fecha').value;
     const p = document.getElementById('in-placa').value.toUpperCase();
     const t = document.getElementById('in-tarjeta').value.toUpperCase();
     const o = document.getElementById('in-operador').value.toUpperCase();
-    if(!p || !t || !o) return alert("Faltan datos.");
-    const fol = `${datosCitaTemp.t[0]}-${p.slice(-4)}-${Math.random().toString(36).slice(-4).toUpperCase()}`;
+    const ton = parseInt(document.getElementById('in-toneladas').value);
+    const f = document.getElementById('filtro-fecha').value;
+
+    const fol = `${datosCitaTemp.t[0]}-${p.slice(-4)}-${Math.random().toString(36).slice(-3).toUpperCase()}`;
 
     const { error } = await supabase.from('reservaciones').insert([{ 
         folio: fol, id_usuario: (await supabase.auth.getUser()).data.user.id, 
         id_fletera: perfilActual.id_fletera, id_bodega: datosCitaTemp.idB, 
-        fecha: f, hora: datosCitaTemp.h, placa_vehiculo: p, nombre_operador: o, num_tarjeta: t, tipo: datosCitaTemp.t 
+        fecha: f, hora: datosCitaTemp.h, placa_vehiculo: p, nombre_operador: o, num_tarjeta: t, 
+        toneladas: ton, tipo: datosCitaTemp.t 
     }]);
 
-    if(error) alert("Placa/Operador ya ocupados hoy.");
-    else { alert("Cita exitosa."); cerrarModal(); actualizarTablaAgenda(); }
+    if(error) alert("Error: Datos duplicados hoy.");
+    else { alert("Agendada: " + fol); cerrarModal(); actualizarTodo(); }
 };
 
+// --- OTROS MÉTODOS ---
+window.registrarUsuario = async () => {
+    const email = document.getElementById('user-email').value;
+    const nombre = document.getElementById('user-fullname').value;
+    const rol = document.getElementById('select-rol-user').value;
+    const idF = document.getElementById('select-fletera-user').value;
+    const bods = Array.from(document.querySelectorAll('input[name="bodega-check"]:checked')).map(c => c.value);
+    const pass = Math.random().toString(36).slice(-8);
+
+    const { data, error } = await supabase.auth.signUp({ email, password: pass });
+    if (error) return alert(error.message);
+
+    await supabase.from('perfiles').insert([{ 
+        id: data.user.id, usuario: nombre, rol: rol, 
+        id_fletera: (rol==='COORDINADOR'?idF:null), 
+        bodegas_asignadas: (rol==='COORDINADOR'?bods:[]) 
+    }]);
+    window.prompt("Creado. Pass:", pass);
+};
+
+window.guardarBodega = async () => {
+    const n = document.getElementById('new-bodega').value;
+    await supabase.from('bodegas').insert([{ nombre: n }]);
+    cargarCatalogosAdmin();
+};
+
+window.guardarFletera = async () => {
+    const n = document.getElementById('new-fletera').value;
+    await supabase.from('empresas_fleteras').insert([{ nombre: n }]);
+    cargarCatalogosAdmin();
+};
+
+async function cargarCatalogosAdmin() {
+    const { data: f } = await supabase.from('empresas_fleteras').select('*').order('nombre');
+    document.getElementById('select-fletera-user').innerHTML = f.map(x => `<option value="${x.id}">${x.nombre}</option>`).join('');
+    const { data: b } = await supabase.from('bodegas').select('*').order('nombre');
+    document.getElementById('bodegas-check-list').innerHTML = b.map(x => `<label><input type="checkbox" name="bodega-check" value="${x.id}"> ${x.nombre}</label>`).join('');
+}
+
+window.habilitarDiaCompleto = async () => {
+    const f = document.getElementById('filtro-fecha').value;
+    const { data: b } = await supabase.from('bodegas').select('*');
+    const regs = [];
+    for(let h=0; h<24; h++) {
+        const hr = `${h.toString().padStart(2,'0')}:00:00`;
+        regs.push({ fecha: f, hora: hr, id_bodega: null, cupos_totales: 5 });
+        b.forEach(x => regs.push({ fecha: f, hora: hr, id_bodega: x.id, cupos_totales: 2 }));
+    }
+    await supabase.from('disponibilidad').upsert(regs, { onConflict: 'id_bodega,fecha,hora' });
+    actualizarTodo();
+};
+
+window.cambiarCupo = async (idB, fec, hor, val) => {
+    await supabase.from('disponibilidad').upsert({ id_bodega: idB, fecha: fec, hora: hor, cupos_totales: parseInt(val) }, { onConflict: 'id_bodega,fecha,hora' });
+};
+
+window.cerrarModal = () => document.getElementById('modal-cita').classList.add('hidden');
+document.getElementById('login-btn').onclick = async () => {
+    const e = document.getElementById('email-input').value;
+    const p = document.getElementById('pass-input').value;
+    const { error } = await supabase.auth.signInWithPassword({ email: e, password: p });
+    if(error) alert(error.message); else checkUser();
+};
 document.getElementById('logout-btn').onclick = () => { supabase.auth.signOut(); location.reload(); };
-document.getElementById('filtro-fecha').onchange = actualizarTablaAgenda;
+document.getElementById('filtro-fecha').onchange = actualizarTodo;
 
 checkUser();

@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistics Pro - Sistema de Arribos</title>
+    <title>Logistics Pro - Cementos Moctezuma</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="login-overlay" class="overlay">
         <div class="card login-card">
-            <h2>Logistics Pro</h2>
+            <h2 style="color:#e11d48">Logistics Pro</h2>
+            <p>Cementos Moctezuma - Acceso</p>
             <input type="email" id="email-input" placeholder="Correo">
             <input type="password" id="pass-input" placeholder="Contraseña">
             <button id="login-btn">Entrar</button>
@@ -17,7 +18,7 @@
     </div>
 
     <nav class="navbar">
-        <h1>Control de Arribos</h1>
+        <h1>Control de Arribos - Cementos Moctezuma</h1>
         <div><span id="user-display"></span> <button id="logout-btn" class="btn-danger">Salir</button></div>
     </nav>
 
@@ -36,14 +37,21 @@
                     <h3>👥 Usuarios</h3>
                     <input type="text" id="user-fullname" placeholder="Nombre Completo">
                     <input type="email" id="user-email" placeholder="Correo Electrónico">
-                    <select id="select-fletera-user"></select>
                     
-                    <div style="margin-top: 15px;">
-                        <strong style="display: block; margin-bottom: 10px; color: #1e293b;">Asignar Bodegas Permitidas:</strong>
-                        <div id="bodegas-check-list" class="check-list">
-                            </div>
+                    <label>Rol del Usuario:</label>
+                    <select id="select-rol-user" onchange="toggleCamposUsuario()">
+                        <option value="COORDINADOR">COORDINADOR (Fletera)</option>
+                        <option value="BASCULA">BASCULA (Control)</option>
+                        <option value="ADMIN">ADMINISTRADOR</option>
+                    </select>
+
+                    <div id="campos-coordinador">
+                        <select id="select-fletera-user"></select>
+                        <div style="margin-top: 15px;">
+                            <strong style="display: block; margin-bottom: 10px; color: #1e293b;">Asignar Bodegas:</strong>
+                            <div id="bodegas-check-list" class="check-list"></div>
+                        </div>
                     </div>
-                    
                     <button onclick="registrarUsuario()" style="width: 100%; margin-top: 10px;">Crear Acceso</button>
                 </div>
             </div>
@@ -52,38 +60,35 @@
         <section id="agenda-view" class="hidden">
             <div id="admin-controls-agenda" class="hidden card" style="background: #fff3cd; border-left: 5px solid #f59e0b;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div>
-                        <strong>Panel de Control:</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Habilite el día para que las fleteras puedan ver los cupos.</p>
-                    </div>
+                    <div><strong>Panel Admin:</strong> <p style="margin:0; font-size:0.8rem;">Habilite cupos para esta fecha.</p></div>
                     <button onclick="habilitarDiaCompleto()" class="btn-success">Habilitar este Día</button>
                 </div>
             </div>
 
-            <div class="card">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
-                        📅 Agenda: 
-                        <input type="date" id="filtro-fecha" style="width: auto; margin: 0; padding: 5px 10px;">
-                    </h3>
-                    
-                    <button onclick="actualizarTablaAgenda()" class="btn-sm" style="background: #64748b; display: flex; align-items: center; gap: 5px;">
-                        🔄 Actualizar Agenda
-                    </button>
+            <div class="grid-main">
+                <div class="card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">📅 Agenda: <input type="date" id="filtro-fecha" style="width: auto;"></h3>
+                        <button onclick="actualizarTodo()" class="btn-sm" style="background: #64748b;">🔄 Actualizar</button>
+                    </div>
+                    <div class="table-scroll">
+                        <table id="main-table">
+                            <thead>
+                                <tr>
+                                    <th>Hora</th>
+                                    <th>Envío (Universal)</th>
+                                    <th>Abasto (Bodegas)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agenda-body"></tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <div class="table-scroll">
-                    <table id="main-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 100px;">Hora</th>
-                                <th>Envío (Universal)</th>
-                                <th>Abasto (Bodegas Asignadas)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="agenda-body">
-                            </tbody>
-                    </table>
+                <div class="card">
+                    <h3>📑 Listado de Arribos</h3>
+                    <div id="resumen-tonelaje" style="margin-bottom:10px; font-weight:bold; color:#10b981"></div>
+                    <div id="listado-citas-container" class="listado-scroll"></div>
                 </div>
             </div>
         </section>
@@ -96,6 +101,12 @@
             <input type="text" id="in-operador" placeholder="Nombre Operador">
             <input type="text" id="in-placa" placeholder="Placas">
             <input type="text" id="in-tarjeta" placeholder="Núm. Tarjeta">
+            <label>Tonelaje:</label>
+            <select id="in-toneladas">
+                <option value="18">18 Toneladas</option>
+                <option value="36">36 Toneladas</option>
+                <option value="50">50 Toneladas</option>
+            </select>
             <div style="display:flex; gap:10px; margin-top:15px;">
                 <button onclick="confirmarCita()" class="btn-success">Confirmar</button>
                 <button onclick="cerrarModal()" class="btn-danger">Cancelar</button>
