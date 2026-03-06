@@ -9,36 +9,39 @@
 <body>
     <div id="login-overlay" class="overlay">
         <div class="card login-card">
-            <h2 style="color:#e11d48">Logistics Pro</h2>
-            <p>Cementos Moctezuma - Acceso</p>
+            <h2 style="color:var(--moctezuma)">CEMENTOS MOCTEZUMA</h2>
+            <p>Acceso al Sistema de Arribos</p>
             <input type="email" id="email-input" placeholder="Correo">
             <input type="password" id="pass-input" placeholder="Contraseña">
-            <button id="login-btn">Entrar</button>
+            <button id="login-btn" style="width:100%">Entrar</button>
         </div>
     </div>
 
     <nav class="navbar">
-        <h1>Control de Arribos - Cementos Moctezuma</h1>
-        <div><span id="user-display"></span> <button id="logout-btn" class="btn-danger">Salir</button></div>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <div style="background:white; color:var(--moctezuma); padding:5px 10px; font-weight:900; border-radius:4px;">M</div>
+            <h1 style="margin:0; font-size:1.2rem;">Control de Arribos</h1>
+        </div>
+        <div><span id="user-display"></span> <button id="logout-btn" class="btn-danger btn-sm">Salir</button></div>
     </nav>
 
     <div class="container">
         <section id="admin-view" class="hidden">
             <div class="grid">
                 <div class="card">
-                    <h3>📦 Catálogos</h3>
-                    <input type="text" id="new-bodega" placeholder="Nueva Bodega">
-                    <button onclick="guardarBodega()">+ Bodega</button>
+                    <h3>📦 Configuración</h3>
+                    <input type="text" id="new-bodega" placeholder="Nombre de Bodega">
+                    <button onclick="guardarBodega()" style="width:100%">+ Registrar Bodega</button>
                     <hr>
-                    <input type="text" id="new-fletera" placeholder="Nueva Fletera">
-                    <button onclick="guardarFletera()">+ Fletera</button>
+                    <input type="text" id="new-fletera" placeholder="Nombre de Fletera">
+                    <button onclick="guardarFletera()" style="width:100%">+ Registrar Fletera</button>
                 </div>
                 <div class="card">
-                    <h3>👥 Usuarios</h3>
+                    <h3>👥 Usuarios y Accesos</h3>
                     <input type="text" id="user-fullname" placeholder="Nombre Completo">
-                    <input type="email" id="user-email" placeholder="Correo Electrónico">
+                    <input type="email" id="user-email" placeholder="Correo">
                     
-                    <label>Rol del Usuario:</label>
+                    <label>Rol:</label>
                     <select id="select-rol-user" onchange="toggleCamposUsuario()">
                         <option value="COORDINADOR">COORDINADOR (Fletera)</option>
                         <option value="BASCULA">BASCULA (Control)</option>
@@ -46,33 +49,31 @@
                     </select>
 
                     <div id="campos-coordinador">
+                        <label>Empresa:</label>
                         <select id="select-fletera-user"></select>
                         <div style="margin-top: 15px;">
-                            <strong style="display: block; margin-bottom: 10px; color: #1e293b;">Asignar Bodegas:</strong>
-                            <div id="bodegas-check-list" class="check-list"></div>
+                            <strong>Asignar Bodegas:</strong>
+                            <div id="bodegas-check-list" class="check-list-grid"></div>
                         </div>
                     </div>
-                    <button onclick="registrarUsuario()" style="width: 100%; margin-top: 10px;">Crear Acceso</button>
+                    <button onclick="registrarUsuario()" style="width: 100%; margin-top: 15px;">Crear Usuario</button>
                 </div>
             </div>
         </section>
 
         <section id="agenda-view" class="hidden">
             <div id="admin-controls-agenda" class="hidden card" style="background: #fff3cd; border-left: 5px solid #f59e0b;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div><strong>Panel Admin:</strong> <p style="margin:0; font-size:0.8rem;">Habilite cupos para esta fecha.</p></div>
-                    <button onclick="habilitarDiaCompleto()" class="btn-success">Habilitar este Día</button>
-                </div>
+                <button onclick="habilitarDiaCompleto()" class="btn-success">Habilitar Cupos para este Día</button>
             </div>
 
             <div class="grid-main">
                 <div class="card">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">📅 Agenda: <input type="date" id="filtro-fecha" style="width: auto;"></h3>
                         <button onclick="actualizarTodo()" class="btn-sm" style="background: #64748b;">🔄 Actualizar</button>
                     </div>
                     <div class="table-scroll">
-                        <table id="main-table">
+                        <table>
                             <thead>
                                 <tr>
                                     <th>Hora</th>
@@ -87,7 +88,7 @@
 
                 <div class="card">
                     <h3>📑 Listado de Arribos</h3>
-                    <div id="resumen-tonelaje" style="margin-bottom:10px; font-weight:bold; color:#10b981"></div>
+                    <div id="resumen-tonelaje" style="margin-bottom:10px; font-weight:bold; color:var(--success)">Total Hoy: 0 TON</div>
                     <div id="listado-citas-container" class="listado-scroll"></div>
                 </div>
             </div>
@@ -97,19 +98,19 @@
     <div id="modal-cita" class="overlay hidden">
         <div class="card modal-content">
             <h3 id="modal-titulo">Nueva Cita</h3>
-            <p id="modal-detalles"></p>
-            <input type="text" id="in-operador" placeholder="Nombre Operador">
+            <p id="modal-detalles" style="font-size:0.9rem; color:#64748b"></p>
+            <input type="text" id="in-operador" placeholder="Nombre del Operador">
             <input type="text" id="in-placa" placeholder="Placas">
             <input type="text" id="in-tarjeta" placeholder="Núm. Tarjeta">
-            <label>Tonelaje:</label>
+            <label>Carga (Toneladas):</label>
             <select id="in-toneladas">
                 <option value="18">18 Toneladas</option>
                 <option value="36">36 Toneladas</option>
                 <option value="50">50 Toneladas</option>
             </select>
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button onclick="confirmarCita()" class="btn-success">Confirmar</button>
-                <button onclick="cerrarModal()" class="btn-danger">Cancelar</button>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button onclick="confirmarCita()" class="btn-success" style="flex:1">Confirmar</button>
+                <button onclick="cerrarModal()" class="btn-danger" style="flex:1">Cancelar</button>
             </div>
         </div>
     </div>

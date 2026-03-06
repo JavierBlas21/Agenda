@@ -127,24 +127,49 @@ async function cargarListadoCitas() {
 window.imprimirTicket = (c) => {
     const v = window.open('', '_blank');
     v.document.write(`
-        <html><head><style>
-            body { font-family: 'Courier New'; text-align: center; border: 2px solid #000; padding: 20px; width: 300px; }
-            .moctezuma { font-weight: bold; border-bottom: 2px solid #000; margin-bottom: 10px; }
-            .folio { font-size: 26px; font-weight: bold; background: #eee; margin: 10px 0; }
-            p { text-align: left; margin: 4px 0; font-size: 14px; }
-        </style></head>
+        <html>
+        <head>
+            <style>
+                @page { size: 80mm 150mm; margin: 0; }
+                body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #000; width: 260px; }
+                .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+                .logo-name { font-size: 18px; font-weight: 900; letter-spacing: -1px; }
+                .sub { font-size: 10px; text-transform: uppercase; margin-top: 5px; }
+                .folio-box { background: #000; color: #fff; padding: 10px; margin: 15px 0; text-align: center; font-size: 22px; font-weight: bold; border-radius: 4px; }
+                .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; border-bottom: 1px dashed #ccc; padding-bottom: 4px; }
+                .label { font-weight: bold; text-transform: uppercase; color: #444; }
+                .footer { text-align: center; font-size: 10px; margin-top: 20px; border-top: 1px solid #000; padding-top: 10px; }
+                .qr-placeholder { border: 1px solid #000; width: 60px; height: 60px; margin: 10px auto; display: flex; align-items: center; justify-content: center; font-size: 8px; }
+            </style>
+        </head>
         <body onload="window.print(); window.close();">
-            <div class="moctezuma">CEMENTOS MOCTEZUMA</div>
-            <div style="font-size:12px">Logistics Pro - Control Arribo</div>
-            <div class="folio">${c.folio}</div>
-            <p><strong>FECHA:</strong> ${c.fecha} | ${c.hora.substring(0,5)} hrs</p>
-            <p><strong>MOV:</strong> ${c.tipo}</p>
-            <hr>
-            <p><strong>PLACA:</strong> ${c.placa_vehiculo}</p>
-            <p><strong>OP:</strong> ${c.nombre_operador}</p>
-            <p><strong>CARGA:</strong> ${c.toneladas} TON</p>
-            <br><small>Favor de presentar este ticket en Báscula.</small>
-        </body></html>
+            <div class="header">
+                <div class="logo-name">CEMENTOS MOCTEZUMA</div>
+                <div class="sub">Logistics Pro - Comprobante de Arribo</div>
+            </div>
+
+            <div class="folio-box">${c.folio}</div>
+
+            <div class="info-row"><span class="label">Operación:</span> <span>${c.tipo} ${c.bodegas?.nombre || ''}</span></div>
+            <div class="info-row"><span class="label">Fecha:</span> <span>${c.fecha}</span></div>
+            <div class="info-row"><span class="label">Horario:</span> <span>${c.hora.substring(0,5)} hrs</span></div>
+            
+            <div style="margin: 15px 0;">
+                <div class="info-row"><span class="label">Unidad:</span> <span>${c.placa_vehiculo}</span></div>
+                <div class="info-row"><span class="label">Operador:</span> <span>${c.nombre_operador}</span></div>
+                <div class="info-row"><span class="label">Carga:</span> <span>${c.toneladas} TONELADAS</span></div>
+                <div class="info-row"><span class="label">ID/Tarjeta:</span> <span>${c.num_tarjeta}</span></div>
+            </div>
+
+            <div class="qr-placeholder">FOLIO SEGURO<br>${c.folio.split('-')[2]}</div>
+
+            <div class="footer">
+                ESTE DOCUMENTO ES SU COMPROBANTE DE CITA.<br>
+                FAVOR DE PRESENTARSE 15 MINUTOS ANTES.<br>
+                <strong>¡BUEN VIAJE!</strong>
+            </div>
+        </body>
+        </html>
     `);
     v.document.close();
 };
