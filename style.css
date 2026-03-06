@@ -4,7 +4,7 @@
     --success: #10b981; 
     --danger: #ef4444; 
     --bg: #f1f5f9; 
-    --moctezuma: #e11d48; /* Color distintivo para el branding */
+    --beto: #e11d48; /* Color distintivo para el branding */
 }
 
 body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; color: #334155; }

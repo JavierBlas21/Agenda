@@ -144,7 +144,7 @@ window.imprimirTicket = (c) => {
         </head>
         <body onload="window.print(); window.close();">
             <div class="header">
-                <div class="logo-name">CEMENTOS MOCTEZUMA</div>
+                <div class="logo-name">SISTEMA DE CITAS</div>
                 <div class="sub">Logistics Pro - Comprobante de Arribo</div>
             </div>
 
@@ -165,7 +165,7 @@ window.imprimirTicket = (c) => {
 
             <div class="footer">
                 ESTE DOCUMENTO ES SU COMPROBANTE DE CITA.<br>
-                FAVOR DE PRESENTARSE 15 MINUTOS ANTES.<br>
+                FAVOR DE PRESENTARSE PRESENTARLO.<br>
                 <strong>¡BUEN VIAJE!</strong>
             </div>
         </body>
