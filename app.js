@@ -98,6 +98,8 @@ async function cargarListadoCitas() {
     const f = document.getElementById('filtro-fecha').value;
     const { data: citas } = await supabase.from('reservaciones').select(`*, empresas_fleteras(nombre)`).eq('fecha', f).eq('estatus', 'ACTIVA').order('hora');
     
+    actualizarMonitorCarga(citas);
+
     const container = document.getElementById('listado-citas-container');
     let totalTon = 0;
     let html = '';
@@ -290,3 +292,36 @@ document.getElementById('logout-btn').onclick = () => { supabase.auth.signOut();
 document.getElementById('filtro-fecha').onchange = actualizarTodo;
 
 checkUser();
+
+// --- NUEVO MONITOR DE CARGA ---
+async function actualizarMonitorCarga(citas) {
+    const monitor = document.getElementById('monitor-carga-horas');
+    if (!monitor) return;
+
+    const resumenHoras = {};
+    for (let i = 0; i < 24; i++) {
+        resumenHoras[`${i.toString().padStart(2, '0')}:00:00`] = 0;
+    }
+
+    // Aquí sumamos TODO lo agendado (esté confirmado o no)
+    citas.forEach(cita => {
+        if (resumenHoras[cita.hora] !== undefined) {
+            resumenHoras[cita.hora] += (cita.toneladas || 0);
+        }
+    });
+
+    let html = '';
+    Object.keys(resumenHoras).forEach(hora => {
+        const tons = resumenHoras[hora];
+        if (tons > 0) {
+            html += `
+                <div class="hora-ton-card">
+                    <strong>${hora.substring(0, 5)}</strong>
+                    <span>${tons}</span>
+                    <small>TON</small>
+                </div>`;
+        }
+    });
+
+    monitor.innerHTML = html || '<p style="font-size:0.8rem; color:#94a3b8">No hay carga agendada aún.</p>';
+}

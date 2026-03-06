@@ -145,3 +145,27 @@ input, select {
     width: 50px !important; padding: 4px; text-align: center; 
     margin: 0; font-weight: bold; color: var(--accent);
 }
+
+/*-----------------------------------------------------------*/
+
+.monitor-tonelaje-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.hora-ton-card {
+    text-align: center;
+    padding: 8px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+.hora-ton-card strong { display: block; font-size: 0.8rem; color: #64748b; }
+.hora-ton-card span { font-size: 1rem; font-weight: 800; color: var(--primary); }
+.hora-ton-card small { font-size: 0.7rem; color: #94a3b8; }
+
