@@ -359,33 +359,54 @@ checkUser();
 
 // --- NUEVO MONITOR DE CARGA ---
 async function actualizarMonitorCarga(citas) {
-    const monitor = document.getElementById('monitor-carga-horas');
-    if (!monitor) return;
+    // 1. Buscamos el contenedor (la "Card" completa que envuelve al monitor)
+    const monitorElement = document.getElementById('monitor-carga-horas');
+    const cardContenedora = monitorElement ? monitorElement.parentElement : null;
 
+    // 🔒 2. FILTRO DE SEGURIDAD: Si no es ADMIN ni BASCULA, ocultamos todo y salimos
+    if (!perfilActual || (perfilActual.rol !== 'ADMIN' && perfilActual.rol !== 'BASCULA')) {
+        if (cardContenedora) cardContenedora.style.display = 'none';
+        return;
+    }
+
+    // 3. Si es Admin o Báscula, nos aseguramos de que sea visible
+    if (cardContenedora) cardContenedora.style.display = 'block';
+    if (!monitorElement) return;
+
+    // 4. Inicializamos el contador de toneladas por cada hora (00 a 23)
     const resumenHoras = {};
     for (let i = 0; i < 24; i++) {
         resumenHoras[`${i.toString().padStart(2, '0')}:00:00`] = 0;
     }
 
-    // Aquí sumamos TODO lo agendado (esté confirmado o no)
+    // 5. Sumamos las toneladas de TODAS las citas activas del día
     citas.forEach(cita => {
         if (resumenHoras[cita.hora] !== undefined) {
             resumenHoras[cita.hora] += (cita.toneladas || 0);
         }
     });
 
+    // 6. Generamos el HTML de las tarjetitas por hora
     let html = '';
-    Object.keys(resumenHoras).forEach(hora => {
+    // Ordenamos las horas para que aparezcan en orden cronológico
+    Object.keys(resumenHoras).sort().forEach(hora => {
         const tons = resumenHoras[hora];
+        
+        // Solo mostramos las horas que tengan carga para no llenar la pantalla de ceros
         if (tons > 0) {
+            // Si quieres que resalte cuando hay mucha carga (ej. más de 100 ton), 
+            // podrías añadir una clase de alerta aquí.
+            const alertaClase = tons >= 100 ? 'style="border: 2px solid var(--danger); background: #fff1f2;"' : '';
+            
             html += `
-                <div class="hora-ton-card">
-                    <strong>${hora.substring(0, 5)}</strong>
+                <div class="hora-ton-card" ${alertaClase}>
+                    <strong>${hora.substring(0, 5)} hrs</strong>
                     <span>${tons}</span>
-                    <small>TON</small>
+                    <small>TON TOTALES</small>
                 </div>`;
         }
     });
 
-    monitor.innerHTML = html || '<p style="font-size:0.8rem; color:#94a3b8">No hay carga agendada aún.</p>';
+    // 7. Renderizamos o mostramos mensaje de vacío
+    monitorElement.innerHTML = html || '<p style="font-size:0.8rem; color:#94a3b8; padding:10px;">No hay carga proyectada para este día.</p>';
 }
