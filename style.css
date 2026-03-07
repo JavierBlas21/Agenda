@@ -174,3 +174,17 @@ input, select {
     display: none; 
 }
 
+.input-cupo-admin {
+    width: 50px;
+    padding: 2px 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.input-cupo-admin:focus {
+    border-color: var(--primary);
+    outline: none;
+    background: #f1f5f9;
+}

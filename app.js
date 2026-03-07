@@ -60,7 +60,7 @@ async function actualizarTablaAgenda() {
         const hr = `${h.toString().padStart(2,'0')}:00:00`;
         const hrL = hr.substring(0,5);
         
-        // --- SECCIÓN ENVÍO ---
+        // --- LÓGICA ENVÍO ---
         const dE = disp.find(d => !d.id_bodega && d.hora === hr);
         const cE = dE ? dE.cupos_totales : 0;
         const oE = res.filter(r => r.hora === hr && r.tipo === 'ENVIO').length;
@@ -68,23 +68,23 @@ async function actualizarTablaAgenda() {
 
         let tdEnvio = "";
         if (perfilActual.rol === 'ADMIN') {
-            // Admin: Input de Capacidad + Botón Verde de Agendar
+            // IMPORTANTE: El input debe tener el onchange para que funcione
             tdEnvio = `
                 <div class="admin-edit-cupo">
-                    Cap: <input type="number" value="${cE}" onchange="cambiarCupo(null,'${f}','${hr}',this.value)">
-                    <br><small>Libres: ${lE}</small>
+                    <label style="font-size:10px; color:#64748b;">CAPACIDAD:</label>
+                    <input type="number" class="input-cupo-admin" value="${cE}" 
+                           onchange="cambiarCupo(null,'${f}','${hr}',this.value)">
+                    <br><small style="color:var(--primary); font-weight:bold;">Libres: ${lE}</small>
                 </div>
-                <button class="btn-sm btn-success" style="width:100%; margin-top:5px;" onclick="prepararCita('${hr}','ENVIO')">+ Agendar</button>
+                <button class="btn-sm btn-success" style="width:100%; margin-top:5px;" 
+                        onclick="prepararCita('${hr}','ENVIO')">+ Agendar</button>
             `;
         } else {
-            // Otros: Solo botón de Reservar (con validación de cupos)
-            tdEnvio = `
-                <span class="badge ${lE>0?'green':'red'}">${lE} Libres</span><br>
-                <button class="btn-sm" onclick="prepararCita('${hr}','ENVIO')" ${lE<=0?'disabled':''}>Reservar</button>
-            `;
+            tdEnvio = `<span class="badge ${lE>0?'green':'red'}">${lE} Libres</span><br>
+                       <button class="btn-sm" onclick="prepararCita('${hr}','ENVIO')" ${lE<=0?'disabled':''}>Reservar</button>`;
         }
 
-        // --- SECCIÓN ABASTO ---
+        // --- LÓGICA ABASTO ---
         let hA = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">';
         const bVis = (perfilActual.rol === 'ADMIN' || perfilActual.rol === 'BASCULA') ? bods : bods.filter(x => (perfilActual.bodegas_asignadas || []).includes(x.id));
         
@@ -94,17 +94,17 @@ async function actualizarTablaAgenda() {
             const oA = res.filter(r => r.hora === hr && r.id_bodega === xb.id).length;
             const lA = cA - oA;
 
-            hA += `<div class="admin-edit-cupo">
+            hA += `<div class="admin-edit-cupo" style="border:1px solid #e2e8f0; padding:5px; border-radius:4px;">
                 <strong>${xb.nombre}</strong><br>`;
             
             if (perfilActual.rol === 'ADMIN') {
-                // Admin: Input + Botón verde pequeño para bodega
                 hA += `
-                    Cap: <input type="number" value="${cA}" onchange="cambiarCupo('${xb.id}','${f}','${hr}',this.value)">
-                    <button class="btn-sm btn-success" style="display:block; width:100%; margin-top:5px; font-size:10px;" onclick="prepararCita('${hr}','ABASTO','${xb.id}','${xb.nombre}')">+ Citar</button>
+                    <input type="number" class="input-cupo-admin" value="${cA}" 
+                           onchange="cambiarCupo('${xb.id}','${f}','${hr}',this.value)">
+                    <button class="btn-sm btn-success" style="display:block; width:100%; margin-top:5px; font-size:10px;" 
+                            onclick="prepararCita('${hr}','ABASTO','${xb.id}','${xb.nombre}')">+ Citar</button>
                 `;
             } else {
-                // Otros: Badge de Libres + Botón azul normal
                 hA += `
                     <span class="badge ${lA>0?'green':'red'}" style="font-size:10px">${lA} Libres</span>
                     <button class="btn-sm" onclick="prepararCita('${hr}','ABASTO','${xb.id}','${xb.nombre}')" ${lA<=0?'disabled':''}>Citar</button>
