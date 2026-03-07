@@ -392,46 +392,36 @@ async function actualizarMonitorCarga(citas) {
     const monitor = document.getElementById('monitor-carga-horas');
     if (!monitor) return;
 
-    // 🔒 1. SEGURIDAD: Solo Admin y Bascula
     if (!perfilActual || (perfilActual.rol !== 'ADMIN' && perfilActual.rol !== 'BASCULA')) {
         monitor.parentElement.style.display = 'none';
         return;
     }
     monitor.parentElement.style.display = 'block';
 
-    // 2. Reiniciar el objeto de conteo
     const resumenHoras = {};
     for (let i = 0; i < 24; i++) {
-        // Aseguramos que el formato coincida con el de la DB (HH:00:00)
-        const hKey = `${i.toString().padStart(2, '0')}:00:00`;
+        // Guardamos solo HH:mm para que la comparación sea más fácil
+        const hKey = `${i.toString().padStart(2, '0')}:00`;
         resumenHoras[hKey] = 0;
     }
 
-    // 3. Sumar toneladas (Sin importar si asistió o no)
     if (citas && citas.length > 0) {
         citas.forEach(cita => {
-            // Verificamos que la cita tenga hora y toneladas válidas
-            if (cita.hora && resumenHoras.hasOwnProperty(cita.hora)) {
-                const tons = parseFloat(cita.toneladas) || 0;
-                resumenHoras[cita.hora] += tons;
+            // Extraemos solo los primeros 5 caracteres de la hora (HH:mm)
+            const horaCitaCorta = cita.hora.substring(0, 5);
+            if (resumenHoras.hasOwnProperty(horaCitaCorta)) {
+                resumenHoras[horaCitaCorta] += parseFloat(cita.toneladas) || 0;
             }
         });
     }
 
-    // 4. Generar el HTML
     let html = '';
-    // Ordenamos las horas de 00 a 23
-    const horasOrdenadas = Object.keys(resumenHoras).sort();
-
-    horasOrdenadas.forEach(hora => {
+    Object.keys(resumenHoras).sort().forEach(hora => {
         const totalTons = resumenHoras[hora];
         if (totalTons > 0) {
-            // Resaltamos si hay saturación (ej. más de 100 toneladas)
-            const claseSaturacion = totalTons >= 100 ? 'saturado' : '';
-            
             html += `
-                <div class="hora-ton-card ${claseSaturacion}">
-                    <strong>${hora.substring(0, 5)} hrs</strong>
+                <div class="hora-ton-card">
+                    <strong>${hora} hrs</strong>
                     <span>${totalTons}</span>
                     <small>TON TOTALES</small>
                 </div>`;
