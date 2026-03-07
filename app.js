@@ -344,25 +344,34 @@ window.habilitarDiaCompleto = async () => {
 window.cambiarCupo = async (idB, fec, hor, val) => {
     const cupoNivel = parseInt(val);
     
-    // 1. Intentamos el UPSERT normal
-    const { error } = await supabase.from('disponibilidad').upsert({ 
-        id_bodega: idB, 
-        fecha: fec, 
-        hora: hor, 
-        cupos_totales: cupoNivel 
-    }, { onConflict: 'id_bodega,fecha,hora' });
+    // 1. Intentamos actualizar primero (Update)
+    let query = supabase.from('disponibilidad')
+        .update({ cupos_totales: cupoNivel })
+        .eq('fecha', fec)
+        .eq('hora', hor);
 
-    // 2. Si falla el Envío (idB es null), forzamos la actualización manual
-    if (error && idB === null) {
-        console.log("Reintentando actualización manual para Envío...");
-        await supabase.from('disponibilidad')
-            .update({ cupos_totales: cupoNivel })
-            .match({ fecha: fec, hora: hor })
-            .is('id_bodega', null);
+    // Si es Abasto, filtramos por id_bodega. Si es Envío, buscamos donde sea null.
+    if (idB) {
+        query = query.eq('id_bodega', idB);
+    } else {
+        query = query.is('id_bodega', null);
     }
 
-    // 3. Refrescamos la vista para que el Admin vea el cambio reflejado
-    // Esto es lo que hace que parezca "automático"
+    const { data, error, count } = await query.select();
+
+    // 2. Si no se actualizó nada (porque no existía el registro), lo creamos (Insert)
+    // Usamos select() y verificamos si data está vacío para saber si el update falló
+    if (!data || data.length === 0) {
+        console.log("No existía el registro, creando uno nuevo...");
+        await supabase.from('disponibilidad').insert({ 
+            id_bodega: idB, 
+            fecha: fec, 
+            hora: hor, 
+            cupos_totales: cupoNivel 
+        });
+    }
+
+    // 3. ¡IMPORTANTE! Refrescamos la interfaz para confirmar el cambio
     actualizarTodo();
 };
 
