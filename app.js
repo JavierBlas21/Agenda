@@ -342,7 +342,28 @@ window.habilitarDiaCompleto = async () => {
 };
 
 window.cambiarCupo = async (idB, fec, hor, val) => {
-    await supabase.from('disponibilidad').upsert({ id_bodega: idB, fecha: fec, hora: hor, cupos_totales: parseInt(val) }, { onConflict: 'id_bodega,fecha,hora' });
+    const cupoNivel = parseInt(val);
+    
+    // 1. Intentamos el UPSERT normal
+    const { error } = await supabase.from('disponibilidad').upsert({ 
+        id_bodega: idB, 
+        fecha: fec, 
+        hora: hor, 
+        cupos_totales: cupoNivel 
+    }, { onConflict: 'id_bodega,fecha,hora' });
+
+    // 2. Si falla el Envío (idB es null), forzamos la actualización manual
+    if (error && idB === null) {
+        console.log("Reintentando actualización manual para Envío...");
+        await supabase.from('disponibilidad')
+            .update({ cupos_totales: cupoNivel })
+            .match({ fecha: fec, hora: hor })
+            .is('id_bodega', null);
+    }
+
+    // 3. Refrescamos la vista para que el Admin vea el cambio reflejado
+    // Esto es lo que hace que parezca "automático"
+    actualizarTodo();
 };
 
 window.cerrarModal = () => document.getElementById('modal-cita').classList.add('hidden');
