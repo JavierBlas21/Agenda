@@ -219,23 +219,23 @@ window.prepararCita = (h, t, idB=null, nB='') => {
     const f = document.getElementById('filtro-fecha').value;
     const ahora = new Date();
     
-    // Obtenemos la hora actual y la hora de la cita en formato numérico (0-23)
+    // --- CORRECCIÓN DE FECHA LOCAL ---
+    // Esto obtiene YYYY-MM-DD usando tu zona horaria local, no la de Londres
+    const hoy = ahora.toLocaleDateString('en-CA'); // 'en-CA' genera formato YYYY-MM-DD
+    
     const horaActual = ahora.getHours();
     const horaCita = parseInt(h.split(':')[0]);
-    
-    // Obtenemos la fecha de hoy en formato YYYY-MM-DD
-    const hoy = ahora.toISOString().split('T')[0];
 
     // --- REGLA DE ORO PARA COORDINADORES ---
     if (perfilActual.rol === 'COORDINADOR') {
-        // 1. Si la fecha es de hoy y la hora ya pasó o es la hora actual
-        if (f === hoy && horaCita <= horaActual) {
-            return alert("🚫 Horario vencido. Las citas para la hora actual o pasada deben ser gestionadas por Admin/Báscula.");
-        }
-        
-        // 2. Si por error intentan agendar en una fecha pasada
+        // Bloquear si es una fecha anterior a hoy
         if (f < hoy) {
             return alert("🚫 No puedes agendar citas en fechas pasadas.");
+        }
+        
+        // Bloquear si es hoy pero la hora ya pasó o es la actual
+        if (f === hoy && horaCita <= horaActual) {
+            return alert("🚫 Horario vencido. Las citas para la hora actual o pasada deben ser gestionadas por Báscula.");
         }
     }
 
