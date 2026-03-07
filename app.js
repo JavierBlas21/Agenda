@@ -389,54 +389,54 @@ checkUser();
 
 // --- NUEVO MONITOR DE CARGA ---
 async function actualizarMonitorCarga(citas) {
-    // 1. Buscamos el contenedor (la "Card" completa que envuelve al monitor)
-    const monitorElement = document.getElementById('monitor-carga-horas');
-    const cardContenedora = monitorElement ? monitorElement.parentElement : null;
+    const monitor = document.getElementById('monitor-carga-horas');
+    if (!monitor) return;
 
-    // 🔒 2. FILTRO DE SEGURIDAD: Si no es ADMIN ni BASCULA, ocultamos todo y salimos
+    // 🔒 1. SEGURIDAD: Solo Admin y Bascula
     if (!perfilActual || (perfilActual.rol !== 'ADMIN' && perfilActual.rol !== 'BASCULA')) {
-        if (cardContenedora) cardContenedora.style.display = 'none';
+        monitor.parentElement.style.display = 'none';
         return;
     }
+    monitor.parentElement.style.display = 'block';
 
-    // 3. Si es Admin o Báscula, nos aseguramos de que sea visible
-    if (cardContenedora) cardContenedora.style.display = 'block';
-    if (!monitorElement) return;
-
-    // 4. Inicializamos el contador de toneladas por cada hora (00 a 23)
+    // 2. Reiniciar el objeto de conteo
     const resumenHoras = {};
     for (let i = 0; i < 24; i++) {
-        resumenHoras[`${i.toString().padStart(2, '0')}:00:00`] = 0;
+        // Aseguramos que el formato coincida con el de la DB (HH:00:00)
+        const hKey = `${i.toString().padStart(2, '0')}:00:00`;
+        resumenHoras[hKey] = 0;
     }
 
-    // 5. Sumamos las toneladas de TODAS las citas activas del día
-    citas.forEach(cita => {
-        if (resumenHoras[cita.hora] !== undefined) {
-            resumenHoras[cita.hora] += (cita.toneladas || 0);
-        }
-    });
+    // 3. Sumar toneladas (Sin importar si asistió o no)
+    if (citas && citas.length > 0) {
+        citas.forEach(cita => {
+            // Verificamos que la cita tenga hora y toneladas válidas
+            if (cita.hora && resumenHoras.hasOwnProperty(cita.hora)) {
+                const tons = parseFloat(cita.toneladas) || 0;
+                resumenHoras[cita.hora] += tons;
+            }
+        });
+    }
 
-    // 6. Generamos el HTML de las tarjetitas por hora
+    // 4. Generar el HTML
     let html = '';
-    // Ordenamos las horas para que aparezcan en orden cronológico
-    Object.keys(resumenHoras).sort().forEach(hora => {
-        const tons = resumenHoras[hora];
-        
-        // Solo mostramos las horas que tengan carga para no llenar la pantalla de ceros
-        if (tons > 0) {
-            // Si quieres que resalte cuando hay mucha carga (ej. más de 100 ton), 
-            // podrías añadir una clase de alerta aquí.
-            const alertaClase = tons >= 100 ? 'style="border: 2px solid var(--danger); background: #fff1f2;"' : '';
+    // Ordenamos las horas de 00 a 23
+    const horasOrdenadas = Object.keys(resumenHoras).sort();
+
+    horasOrdenadas.forEach(hora => {
+        const totalTons = resumenHoras[hora];
+        if (totalTons > 0) {
+            // Resaltamos si hay saturación (ej. más de 100 toneladas)
+            const claseSaturacion = totalTons >= 100 ? 'saturado' : '';
             
             html += `
-                <div class="hora-ton-card" ${alertaClase}>
+                <div class="hora-ton-card ${claseSaturacion}">
                     <strong>${hora.substring(0, 5)} hrs</strong>
-                    <span>${tons}</span>
+                    <span>${totalTons}</span>
                     <small>TON TOTALES</small>
                 </div>`;
         }
     });
 
-    // 7. Renderizamos o mostramos mensaje de vacío
-    monitorElement.innerHTML = html || '<p style="font-size:0.8rem; color:#94a3b8; padding:10px;">No hay carga proyectada para este día.</p>';
+    monitor.innerHTML = html || '<p style="font-size:0.8rem; color:#94a3b8; padding:15px; grid-column: 1 / -1; text-align: center;">No hay carga agendada para este día.</p>';
 }
