@@ -132,10 +132,34 @@ async function cargarListadoCitas() {
 
     citas.forEach(c => {
         if(c.asistio) totalTon += (c.toneladas || 0);
+        
+        // --- Lógica de tiempo para cancelación ---
         const ahora = new Date();
+        const horaActual = ahora.getHours();
         const horaCita = parseInt(c.hora.split(':')[0]);
-        // Validación 1 hora antes para cancelar
-        const puedeCancelar = (perfilActual.rol === 'ADMIN' || (horaCita - ahora.getHours() >= 1));
+        const fechaFiltro = document.getElementById('filtro-fecha').value;
+        const hoy = ahora.toLocaleDateString('en-CA');
+
+        // --- REGLAS DE CANCELACIÓN POR ROL ---
+        let puedeCancelar = false;
+
+        if (perfilActual.rol === 'ADMIN') {
+            // 1. Admin: Control total siempre
+            puedeCancelar = true; 
+        } 
+        else if (perfilActual.rol === 'BASCULA') {
+            // 2. Báscula: Puede cancelar si el camión no ha llegado (limpieza de fila)
+            if (!c.asistio) puedeCancelar = true;
+        } 
+        else if (perfilActual.rol === 'COORDINADOR') {
+            // 3. Coordinador: Solo fechas futuras o hoy con 1 hora de margen
+            const esFechaFutura = fechaFiltro > hoy;
+            const esHoyConTiempo = (fechaFiltro === hoy && (horaCita - horaActual) >= 1);
+            
+            if (!c.asistio && (esFechaFutura || esHoyConTiempo)) {
+                puedeCancelar = true;
+            }
+        }
 
         html += `
             <div class="card-cita ${c.asistio ? 'asistio' : ''}">
@@ -143,8 +167,12 @@ async function cargarListadoCitas() {
                 <small>${c.empresas_fleteras?.nombre || 'INTERNO'} | ${c.toneladas} TON</small><br>
                 <div style="margin-top:5px; display:flex; gap:5px;">
                     <button class="btn-sm" onclick='imprimirTicket(${JSON.stringify(c)})'>🎫 Ticket</button>
-                    ${(perfilActual.rol==='BASCULA' || perfilActual.rol==='ADMIN') && !c.asistio ? `<button class="btn-sm btn-success" onclick="confirmarArribo('${c.id}')">OK</button>` : ''}
-                    ${puedeCancelar ? `<button class="btn-sm btn-danger" onclick="cancelarCita('${c.id}')">X</button>` : ''}
+                    
+                    ${(perfilActual.rol==='BASCULA' || perfilActual.rol==='ADMIN') && !c.asistio ? 
+                        `<button class="btn-sm btn-success" onclick="confirmarArribo('${c.id}')">OK</button>` : ''}
+                    
+                    ${puedeCancelar ? 
+                        `<button class="btn-sm btn-danger" onclick="cancelarCita('${c.id}')">X</button>` : ''}
                 </div>
             </div>`;
     });
