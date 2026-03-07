@@ -372,7 +372,7 @@ window.cambiarCupo = async (idB, fec, hor, val) => {
     }
 
     // 3. ¡IMPORTANTE! Refrescamos la interfaz para confirmar el cambio
-    actualizarTodo();
+    //actualizarTodo();
 };
 
 window.cerrarModal = () => document.getElementById('modal-cita').classList.add('hidden');
