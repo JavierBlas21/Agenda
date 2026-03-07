@@ -390,57 +390,65 @@ checkUser();
 // --- NUEVO MONITOR DE CARGA ---
 async function actualizarMonitorCarga(citas) {
     const monitor = document.getElementById('monitor-carga-horas');
-    if (!monitor) return;
+    // Buscamos la tarjeta completa que envuelve el monitor
+    const contenedorPrincipal = document.querySelector('.monitor-card-container');
+    
+    if (!monitor || !contenedorPrincipal) return;
 
-    // 1. Filtro de seguridad (Esto ya vimos que funciona bien)
+    // 1. 🔒 FILTRO DE SEGURIDAD
+    // Si el usuario no es ADMIN ni BASCULA, ocultamos la tarjeta completa y salimos
     if (!perfilActual || (perfilActual.rol !== 'ADMIN' && perfilActual.rol !== 'BASCULA')) {
-        monitor.parentElement.style.display = 'none';
+        contenedorPrincipal.style.display = 'none';
         return;
     }
-    monitor.parentElement.style.display = 'block';
 
-    // 2. Creamos el mapa de horas (HH:mm)
+    // 2. ✅ MOSTRAR PARA JEFES
+    // Si llegó aquí es Admin o Báscula, así que aseguramos que se vea
+    contenedorPrincipal.style.display = 'block';
+
+    // 3. REINICIAR CONTEO DE HORAS (00:00 a 23:00)
     const resumenHoras = {};
     for (let i = 0; i < 24; i++) {
         const hKey = `${i.toString().padStart(2, '0')}:00`;
         resumenHoras[hKey] = 0;
     }
 
-    // 3. Procesamos las citas
-    console.log("Datos recibidos en monitor:", citas); // Ver en consola F12
-
+    // 4. PROCESAR DATOS
     if (citas && citas.length > 0) {
         citas.forEach(cita => {
             if (cita.hora) {
-                // NORMALIZACIÓN: Tomamos solo los primeros 5 caracteres (08:00)
+                // Cortamos la hora a HH:mm para asegurar que coincida con nuestras llaves
                 const horaLimpia = cita.hora.substring(0, 5);
                 
                 if (resumenHoras.hasOwnProperty(horaLimpia)) {
+                    // Sumamos las toneladas convirtiendo a número por seguridad
                     const ton = parseFloat(cita.toneladas) || 0;
                     resumenHoras[horaLimpia] += ton;
-                    console.log(`Sumando ${ton} ton a la hora ${horaLimpia}`);
                 }
             }
         });
     }
 
-    // 4. Construimos el HTML
-    let html = '';
-    const horasConDatos = Object.keys(resumenHoras).filter(h => resumenHoras[h] > 0).sort();
+    // 5. GENERAR EL HTML
+    let contenidoHTML = '';
+    // Solo filtramos las horas que tengan más de 0 toneladas
+    const horasConCarga = Object.keys(resumenHoras).filter(h => resumenHoras[h] > 0).sort();
 
-    if (horasConDatos.length > 0) {
-        horasConDatos.forEach(hora => {
+    if (horasConCarga.length > 0) {
+        horasConCarga.forEach(hora => {
             const total = resumenHoras[hora];
-            html += `
-                <div class="hora-ton-card">
-                    <strong>${hora} hrs</strong>
-                    <span>${total.toLocaleString()}</span>
-                    <small>TON AGENDADAS</small>
+            // Estilo visual de la tarjeta de hora
+            contenidoHTML += `
+                <div class="hora-ton-card" style="background:white; padding:10px; border-radius:8px; border:1px solid #e2e8f0; text-align:center; min-width:90px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <strong style="display:block; font-size:12px; color:#64748b; text-transform:uppercase;">${hora} hrs</strong>
+                    <span style="display:block; font-size:20px; font-weight:900; color:var(--primary); margin: 4px 0;">${total}</span>
+                    <small style="font-size:9px; color:#94a3b8; font-weight:bold;">TON AGENDADAS</small>
                 </div>`;
         });
     } else {
-        html = '<p style="color:#94a3b8; font-size:0.8rem; padding:10px;">No hay toneladas proyectadas para esta fecha.</p>';
+        contenidoHTML = '<p style="padding:15px; color:#94a3b8; font-size:0.85rem; text-align:center; width:100%;">No hay carga proyectada para esta fecha.</p>';
     }
 
-    monitor.innerHTML = html;
+    // 6. INYECCIÓN FINAL
+    monitor.innerHTML = contenidoHTML;
 }
