@@ -218,18 +218,34 @@ window.cancelarCita = async (id) => {
 window.prepararCita = (h, t, idB=null, nB='') => {
     const f = document.getElementById('filtro-fecha').value;
     const ahora = new Date();
+    
+    // Obtenemos la hora actual y la hora de la cita en formato numérico (0-23)
+    const horaActual = ahora.getHours();
     const horaCita = parseInt(h.split(':')[0]);
     
-    // MODIFICACIÓN: Si es ADMIN, no le bloqueamos la hora aunque ya haya pasado
-    if(f === ahora.toISOString().split('T')[0] && horaCita <= ahora.getHours()) {
-        if(perfilActual.rol === 'COORDINADOR') {
-            return alert("Vencido. Contacte a Báscula para emergencia.");
+    // Obtenemos la fecha de hoy en formato YYYY-MM-DD
+    const hoy = ahora.toISOString().split('T')[0];
+
+    // --- REGLA DE ORO PARA COORDINADORES ---
+    if (perfilActual.rol === 'COORDINADOR') {
+        // 1. Si la fecha es de hoy y la hora ya pasó o es la hora actual
+        if (f === hoy && horaCita <= horaActual) {
+            return alert("🚫 Horario vencido. Las citas para la hora actual o pasada deben ser gestionadas por Admin/Báscula.");
         }
-        // Si es ADMIN o BASCULA, dejamos que pase (aparecerá como emergencia)
+        
+        // 2. Si por error intentan agendar en una fecha pasada
+        if (f < hoy) {
+            return alert("🚫 No puedes agendar citas en fechas pasadas.");
+        }
     }
 
+    // Si pasó las validaciones (o es Admin/Báscula), procedemos:
     datosCitaTemp = { h, t, idB, nB };
-    document.getElementById('modal-titulo').innerText = `${t} ${nB} ${perfilActual.rol!=='COORDINADOR'?'(INTERNO/ADMIN)':''}`;
+    
+    // Cambiamos el título del modal para que el Admin sepa que está haciendo algo especial
+    const etiquetaExtra = (perfilActual.rol !== 'COORDINADOR') ? ' (EMERGENCIA/ADMIN)' : '';
+    document.getElementById('modal-titulo').innerText = `${t} ${nB}${etiquetaExtra}`;
+    
     document.getElementById('modal-detalles').innerText = `${h.substring(0,5)} hrs`;
     document.getElementById('modal-cita').classList.remove('hidden');
 };
