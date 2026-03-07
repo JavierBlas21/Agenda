@@ -392,41 +392,55 @@ async function actualizarMonitorCarga(citas) {
     const monitor = document.getElementById('monitor-carga-horas');
     if (!monitor) return;
 
+    // 1. Filtro de seguridad (Esto ya vimos que funciona bien)
     if (!perfilActual || (perfilActual.rol !== 'ADMIN' && perfilActual.rol !== 'BASCULA')) {
         monitor.parentElement.style.display = 'none';
         return;
     }
     monitor.parentElement.style.display = 'block';
 
+    // 2. Creamos el mapa de horas (HH:mm)
     const resumenHoras = {};
     for (let i = 0; i < 24; i++) {
-        // Guardamos solo HH:mm para que la comparación sea más fácil
         const hKey = `${i.toString().padStart(2, '0')}:00`;
         resumenHoras[hKey] = 0;
     }
 
+    // 3. Procesamos las citas
+    console.log("Datos recibidos en monitor:", citas); // Ver en consola F12
+
     if (citas && citas.length > 0) {
         citas.forEach(cita => {
-            // Extraemos solo los primeros 5 caracteres de la hora (HH:mm)
-            const horaCitaCorta = cita.hora.substring(0, 5);
-            if (resumenHoras.hasOwnProperty(horaCitaCorta)) {
-                resumenHoras[horaCitaCorta] += parseFloat(cita.toneladas) || 0;
+            if (cita.hora) {
+                // NORMALIZACIÓN: Tomamos solo los primeros 5 caracteres (08:00)
+                const horaLimpia = cita.hora.substring(0, 5);
+                
+                if (resumenHoras.hasOwnProperty(horaLimpia)) {
+                    const ton = parseFloat(cita.toneladas) || 0;
+                    resumenHoras[horaLimpia] += ton;
+                    console.log(`Sumando ${ton} ton a la hora ${horaLimpia}`);
+                }
             }
         });
     }
 
+    // 4. Construimos el HTML
     let html = '';
-    Object.keys(resumenHoras).sort().forEach(hora => {
-        const totalTons = resumenHoras[hora];
-        if (totalTons > 0) {
+    const horasConDatos = Object.keys(resumenHoras).filter(h => resumenHoras[h] > 0).sort();
+
+    if (horasConDatos.length > 0) {
+        horasConDatos.forEach(hora => {
+            const total = resumenHoras[hora];
             html += `
                 <div class="hora-ton-card">
                     <strong>${hora} hrs</strong>
-                    <span>${totalTons}</span>
-                    <small>TON TOTALES</small>
+                    <span>${total.toLocaleString()}</span>
+                    <small>TON AGENDADAS</small>
                 </div>`;
-        }
-    });
+        });
+    } else {
+        html = '<p style="color:#94a3b8; font-size:0.8rem; padding:10px;">No hay toneladas proyectadas para esta fecha.</p>';
+    }
 
-    monitor.innerHTML = html || '<p style="font-size:0.8rem; color:#94a3b8; padding:15px; grid-column: 1 / -1; text-align: center;">No hay carga agendada para este día.</p>';
+    monitor.innerHTML = html;
 }
